@@ -32,6 +32,7 @@ set_property(TARGET 04-stdthreads_legacy 04-stdthreads_per_thread
 add_executable(radiation
     radiation/main.cpp
     radiation/config.hpp
+    radiation/config.cpp
     radiation/fx_case.hpp
     radiation/fx_case.cpp
     radiation/kernel_cpu.hpp

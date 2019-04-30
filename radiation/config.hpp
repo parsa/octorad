@@ -26,7 +26,7 @@ enum class eos
     wd
 };
 
-eos opts_eos = eos::ideal;
+extern eos opts_eos;
 
 constexpr double de_switch1 = 0.10000000000000001;
 constexpr double de_switch2 = 0.0010000000000000000;
