@@ -8,6 +8,11 @@
 
 struct fx_args
 {
+    std::int64_t opts_eos;
+    std::int64_t opts_problem;
+    double physcon_A;
+    double physcon_B;
+    double physcon_c;
     std::int64_t er_i{};
     std::int64_t fx_i{};
     std::int64_t fy_i{};

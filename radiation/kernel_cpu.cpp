@@ -12,6 +12,7 @@
 #include <vector>
 
 using space_vector = std::array<double, 4>;
+constexpr std::int64_t MARSHAK = 9;
 
 constexpr inline std::int64_t hindex(
     std::int64_t i, std::int64_t j, std::int64_t k)
@@ -30,40 +31,10 @@ constexpr inline double INVERSE(double a)
     return 1.0 / a;
 }
 
-struct physcon_t
-{
-    double A;
-    double G;
-    double B;
-    double kb;
-    double sigma;
-    double c;
-    double mh;
-    double h;
-    template <class Arc>
-    void serialize(Arc& arc, unsigned)
-    {
-        arc& A;
-        arc& G;
-        arc& B;
-        arc& c;
-        arc& sigma;
-        arc& kb;
-        arc& mh;
-        arc& h;
-    }
-};
-
-physcon_t& physcon()
-{
-    static physcon_t physcon_ = {1, 1, 1, 1, 1.0, 1.0, 1.0, 1.0};
-    return physcon_;
-}
-
 template <class U>
-U B_p(U rho, U e, U mmw)
+U B_p(double const physcon_c, U rho, U e, U mmw)
 {
-    return U((physcon().c / 4.0 / M_PI)) * e;
+    return U((physcon_c / 4.0 / M_PI)) * e;
 }
 
 template <class U>
@@ -91,8 +62,10 @@ constexpr inline T cube(T const& val)
 }
 
 inline double ztwd_enthalpy(
-    double d, double A = physcon().A, double B = physcon().B)
+    double const physcon_A, double const physcon_B, double d)
 {
+    double A = physcon_A;
+    double B = physcon_B;
     if (d < 0.0)
     {
         printf("d = %e in ztwd_enthalpy\n", d);
@@ -112,8 +85,10 @@ inline double ztwd_enthalpy(
 }
 
 inline double ztwd_pressure(
-    double d, double A = physcon().A, double B = physcon().B)
+    double const physcon_A, double const physcon_B, double d)
 {
+    double A = physcon_A;
+    double B = physcon_B;
     const double x = std::pow(d / B, 1.0 / 3.0);
     double p;
     if (x < 0.01)
@@ -129,9 +104,13 @@ inline double ztwd_pressure(
     return p;
 }
 
-double ztwd_energy(double d, double A = physcon().A, double B = physcon().B)
+double ztwd_energy(double const physcon_A, double const physcon_B, double d)
 {
-    return std::max(ztwd_enthalpy(d) * d - ztwd_pressure(d), double(0));
+    double A = physcon_A;
+    double B = physcon_B;
+    return std::max(ztwd_enthalpy(physcon_A, physcon_B, d) * d -
+            ztwd_pressure(physcon_A, physcon_B, d),
+        double(0));
 }
 
 template <typename F>
@@ -215,11 +194,11 @@ space_vector operator*(space_vector const& lhs, double rhs)
     return ret;
 }
 
-std::pair<double, space_vector> implicit_radiation_step(double E0, double& e0,
-    space_vector F0, space_vector u0, double rho, double mmw, double X,
-    double Z, double dt)
+std::pair<double, space_vector> implicit_radiation_step(double const physcon_c,
+    double E0, double& e0, space_vector F0, space_vector u0, double rho,
+    double mmw, double X, double Z, double dt)
 {
-    double const c = physcon().c;
+    double const c = physcon_c;
     double kp = kappa_p(rho, e0, mmw, X, Z);
     double kr = kappa_R(rho, e0, mmw, X, Z);
     double const rhoc2 = rho * c * c;
@@ -231,8 +210,8 @@ std::pair<double, space_vector> implicit_radiation_step(double E0, double& e0,
     kp *= dt * c;
     kr *= dt * c;
 
-    auto const B = [rho, mmw, c, rhoc2](double e) {
-        return (4.0 * M_PI / c) * B_p(rho, e * rhoc2, mmw) / rhoc2;
+    auto const B = [physcon_c, rho, mmw, c, rhoc2](double e) {
+        return (4.0 * M_PI / c) * B_p(physcon_c, rho, e * rhoc2, mmw) / rhoc2;
     };
 
     auto E = E0;
@@ -282,11 +261,13 @@ std::pair<double, space_vector> implicit_radiation_step(double E0, double& e0,
         double((E - E0) * dtinv * rhoc2), ((F - F0) * dtinv * rhoc2 * c));
 }
 
-void radiation_cpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
-    std::int64_t const fy_i, std::int64_t const fz_i, std::int64_t const d,
-    std::vector<double> const& rho, std::vector<double>& sx,
-    std::vector<double>& sy, std::vector<double>& sz, std::vector<double>& egas,
-    std::vector<double>& tau, double const fgamma,
+void radiation_cpu_kernel(std::int64_t const opts_eos,
+    std::int64_t const opts_problem, double const physcon_A,
+    double const physcon_B, double const physcon_c, std::int64_t const er_i,
+    std::int64_t const fx_i, std::int64_t const fy_i, std::int64_t const fz_i,
+    std::int64_t const d, std::vector<double> const& rho,
+    std::vector<double>& sx, std::vector<double>& sy, std::vector<double>& sz,
+    std::vector<double>& egas, std::vector<double>& tau, double const fgamma,
     std::array<std::vector<double>, NRF> U, std::vector<double> const mmw,
     std::vector<double> const X_spc, std::vector<double> const Z_spc,
     double const dt, double const clightinv)
@@ -310,9 +291,9 @@ void radiation_cpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
                 e0 -= 0.5 * vx * vx * den;
                 e0 -= 0.5 * vy * vy * den;
                 e0 -= 0.5 * vz * vz * den;
-                if (opts_eos == eos::wd)
+                if (opts_eos == eos_wd)
                 {
-                    e0 -= ztwd_energy(den);
+                    e0 -= ztwd_energy(physcon_A, physcon_B, den);
                 }
                 if (e0 < egas[iiih] * de_switch2)
                 {
@@ -332,8 +313,8 @@ void radiation_cpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
                 space_vector u1 = u0;
                 double e1 = e0;
 
-                auto const ddt = implicit_radiation_step(E1, e1, F1, u1, den,
-                    mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
+                auto const ddt = implicit_radiation_step(physcon_c, E1, e1, F1,
+                    u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
                 double const dE_dt = ddt.first;
                 double const dFx_dt = ddt.second[0];
                 double const dFy_dt = ddt.second[1];
@@ -355,16 +336,19 @@ void radiation_cpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
                 e -= 0.5 * sx[iiih] * sx[iiih] * deninv;
                 e -= 0.5 * sy[iiih] * sy[iiih] * deninv;
                 e -= 0.5 * sz[iiih] * sz[iiih] * deninv;
-                if (opts_eos == eos::wd)
+                if (opts_eos == eos_wd)
                 {
-                    e -= ztwd_energy(den);
+                    e -= ztwd_energy(physcon_A, physcon_B, den);
                 }
                 if (e < de_switch1 * egas[iiih])
                 {
                     e = e1;
                 }
-                egas[iiih] = e;
-                sx[iiih] = sy[iiih] = sz[iiih] = 0;
+                if (opts_problem == MARSHAK)
+                {
+                    egas[iiih] = e;
+                    sx[iiih] = sy[iiih] = sz[iiih] = 0;
+                }
                 if (U[er_i][iiir] <= 0.0)
                 {
                     printf("Er = %e %e %e %e\n", E0, E1, U[er_i][iiir], dt);
@@ -378,8 +362,11 @@ void radiation_cpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
                         dE_dt * dt);
                     abort();
                 }
-                sx[iiih] = sy[iiih] = sz[iiih] = 0;
-                egas[iiih] = e;
+                if (opts_problem == MARSHAK)
+                {
+                    sx[iiih] = sy[iiih] = sz[iiih] = 0;
+                    egas[iiih] = e;
+                }
             }
         }
     }

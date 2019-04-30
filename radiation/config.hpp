@@ -20,13 +20,8 @@ constexpr std::int64_t H_DNX = H_NX * H_NX;
 constexpr std::int64_t H_DNY = H_NX;
 constexpr std::int64_t H_DNZ = 1;
 
-enum class eos
-{
-    ideal,
-    wd
-};
-
-extern eos opts_eos;
+constexpr std::int64_t eos_ideal = 0;
+constexpr std::int64_t eos_wd = 1;
 
 constexpr double de_switch1 = 0.10000000000000001;
 constexpr double de_switch2 = 0.0010000000000000000;

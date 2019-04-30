@@ -76,6 +76,11 @@ fx_args load_case_args(std::size_t index)
     }
 
     fx_args args;
+    args.opts_eos = load_i(is, "opts_eos");
+    args.opts_problem = load_i(is, "opts_problem");
+    args.physcon_A = load_d(is, "physcon_A");
+    args.physcon_B = load_d(is, "physcon_B");
+    args.physcon_c = load_d(is, "physcon_c");
     args.er_i = load_i(is, "er_i");
     args.fx_i = load_i(is, "fx_i");
     args.fy_i = load_i(is, "fy_i");
