@@ -11,7 +11,45 @@
 #include <utility>
 #include <vector>
 
+#if defined(OCTORAD_HAVE_VC)
+using space_vector = Vc::Vector<real, Vc::VectorAbi::Avx>;
+#else
 using space_vector = std::array<double, 4>;
+
+space_vector operator/(space_vector const& lhs, double const rhs)
+{
+    space_vector ret;
+    ret[0] = lhs[0] / rhs;
+    ret[1] = lhs[1] / rhs;
+    ret[2] = lhs[2] / rhs;
+    ret[3] = lhs[3] / rhs;
+
+    return ret;
+}
+
+space_vector operator-(space_vector const& lhs, space_vector const& rhs)
+{
+    space_vector ret;
+    ret[0] = lhs[0] - rhs[0];
+    ret[1] = lhs[1] - rhs[1];
+    ret[2] = lhs[2] - rhs[2];
+    ret[3] = lhs[3] - rhs[3];
+
+    return ret;
+}
+
+space_vector operator*(space_vector const& lhs, double const rhs)
+{
+    space_vector ret;
+    ret[0] = lhs[0] * rhs;
+    ret[1] = lhs[1] * rhs;
+    ret[2] = lhs[2] * rhs;
+    ret[3] = lhs[3] * rhs;
+
+    return ret;
+}
+#endif
+
 constexpr std::int64_t MARSHAK = 9;
 
 constexpr inline std::int64_t hindex(
@@ -39,6 +77,7 @@ U B_p(
     {
         return U((physcon_c / 4.0 / M_PI)) * e;
     }
+    std::printf("marshak is the only supported problem type\n");
     std::abort();
 }
 
@@ -50,6 +89,7 @@ U kappa_p(
     {
         return MARSHAK_OPAC;
     }
+    std::printf("marshak is the only supported problem type\n");
     std::abort();
 }
 
@@ -61,6 +101,7 @@ U kappa_R(
     {
         return MARSHAK_OPAC;
     }
+    std::printf("marshak is the only supported problem type\n");
     std::abort();
 }
 
@@ -83,8 +124,8 @@ inline double ztwd_enthalpy(
     double B = physcon_B;
     if (d < 0.0)
     {
-        printf("d = %e in ztwd_enthalpy\n", d);
-        abort();
+        std::printf("d = %e in ztwd_enthalpy\n", d);
+        std::abort();
     }
     double const x = std::pow(d / B, 1.0 / 3.0);
     double h;
@@ -176,43 +217,10 @@ void abort_if_solver_not_converged(double const eg_t0, double E0, F const test,
     std::abort();
 }
 
-space_vector operator/(space_vector const& lhs, double rhs)
-{
-    space_vector ret;
-    ret[0] = lhs[0] / rhs;
-    ret[1] = lhs[1] / rhs;
-    ret[2] = lhs[2] / rhs;
-    ret[3] = lhs[3] / rhs;
-
-    return ret;
-}
-
-space_vector operator-(space_vector const& lhs, space_vector const& rhs)
-{
-    space_vector ret;
-    ret[0] = lhs[0] - rhs[0];
-    ret[1] = lhs[1] - rhs[1];
-    ret[2] = lhs[2] - rhs[2];
-    ret[3] = lhs[3] - rhs[3];
-
-    return ret;
-}
-
-space_vector operator*(space_vector const& lhs, double rhs)
-{
-    space_vector ret;
-    ret[0] = lhs[0] * rhs;
-    ret[1] = lhs[1] * rhs;
-    ret[2] = lhs[2] * rhs;
-    ret[3] = lhs[3] * rhs;
-
-    return ret;
-}
-
 std::pair<double, space_vector> implicit_radiation_step(
     std::int64_t const opts_problem, double const physcon_c, double E0,
-    double& e0, space_vector F0, space_vector u0, double rho, double mmw,
-    double X, double Z, double dt)
+    double& e0, space_vector F0, space_vector u0, double const rho,
+    double const mmw, double const X, double const Z, double const dt)
 {
     double const c = physcon_c;
     double kp = kappa_p(opts_problem, rho, e0, mmw, X, Z);
@@ -226,7 +234,8 @@ std::pair<double, space_vector> implicit_radiation_step(
     kp *= dt * c;
     kr *= dt * c;
 
-    auto const B = [opts_problem, physcon_c, rho, mmw, c, rhoc2](double e) {
+    auto const B = [opts_problem, physcon_c, rho, mmw, c, rhoc2](
+                       double const e) {
         return (4.0 * M_PI / c) *
             B_p(opts_problem, physcon_c, rho, e * rhoc2, mmw) / rhoc2;
     };
@@ -260,7 +269,7 @@ std::pair<double, space_vector> implicit_radiation_step(
             u2 += u[d] * u[d];
             udotF += F[d] * u[d];
         }
-        ei = std::max(eg_t0 - E + E0 - 0.5 * u2, double(0.0));
+        ei = std::max(eg_t0 - E + E0 - 0.5 * u2, double{});
         double const b = B(ei);
         double f = E - E0;
         f += (kp * (E - b) + (kr - 2.0 * kp) * udotF);
@@ -370,16 +379,17 @@ void radiation_cpu_kernel(std::int64_t const opts_eos,
                 }
                 if (U[er_i][iiir] <= 0.0)
                 {
-                    printf("Er = %e %e %e %e\n", E0, E1, U[er_i][iiir], dt);
-                    abort();
+                    std::printf(
+                        "Er = %e %e %e %e\n", E0, E1, U[er_i][iiir], dt);
+                    std::abort();
                 }
                 e = std::max(e, 0.0);
                 tau[iiih] = std::pow(e, INVERSE(fgamma));
                 if (U[er_i][iiir] <= 0.0)
                 {
-                    printf("2231242!!! %e %e %e \n", E0, U[er_i][iiir],
+                    std::printf("2231242!!! %e %e %e \n", E0, U[er_i][iiir],
                         dE_dt * dt);
-                    abort();
+                    std::abort();
                 }
                 if (opts_problem == MARSHAK)
                 {
