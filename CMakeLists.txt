@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(octorad CXX CUDA)
 
+###############################################################################
+# Options
+###############################################################################
 option(OCTORAD_WITH_PLAYGROUND "" OFF)
 
 ###############################################################################
@@ -43,6 +46,12 @@ endif()
 ###############################################################################
 # Octo-tiger Radiation Kernel
 ###############################################################################
+
+if(NOT EXISTS ${OCTORAD_DUMP_DIR} OR NOT IS_DIRECTORY ${OCTORAD_DUMP_DIR})
+    message(FATAL_ERROR "Unable to access dump directory.")
+endif()
+message(STATUS "OCTORAD_DUMP_DIR is set to: " ${OCTORAD_DUMP_DIR})
+
 add_executable(radiation_kernel
     radiation/main.cpp
     radiation/config.hpp
@@ -55,7 +64,8 @@ add_executable(radiation_kernel
     radiation/kernel_gpu.cu
 )
 #target_compile_options(radiation_kernel PRIVATE --default-stream per-thread)
-target_compile_definitions(radiation_kernel PRIVATE _USE_MATH_DEFINES)
+target_compile_definitions(radiation_kernel PRIVATE
+    _USE_MATH_DEFINES OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --default-stream per-thread")
 
 set_property(TARGET radiation_kernel
@@ -66,7 +76,7 @@ set_property(TARGET radiation_kernel
 ###############################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY
-    VS_STARTUP_PROJECT radiation)
+    VS_STARTUP_PROJECT radiation_kernel)
     #VS_STARTUP_PROJECT 01-heat-conduction)
 
 #if(BUILD_TESTING)

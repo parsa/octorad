@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-constexpr char const* const basepath = "C:\\Users\\Parsa\\Desktop\\arg-dumps\\octotiger-radiation-";
+constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
 std::vector<double> load_v(std::istream& is, std::string var_name)
 {

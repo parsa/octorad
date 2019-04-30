@@ -114,7 +114,6 @@ bool check_case(size_t index)
 
 int main()
 {
-    std::printf("epsilon: %g\n", std::numeric_limits<double>::epsilon());
     //check_case(4452);
     for (size_t i = 13138; i >= 0; --i)
     {
