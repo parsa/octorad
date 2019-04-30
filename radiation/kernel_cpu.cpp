@@ -10,9 +10,12 @@
 #include <cstdlib>
 #include <utility>
 #include <vector>
+#if defined(OCTORAD_HAVE_VC)
+    #include <Vc/Vc>
+#endif
 
 #if defined(OCTORAD_HAVE_VC)
-using space_vector = Vc::Vector<real, Vc::VectorAbi::Avx>;
+using space_vector = Vc::Vector<double, Vc::VectorAbi::Avx>;
 #else
 using space_vector = std::array<double, 4>;
 
