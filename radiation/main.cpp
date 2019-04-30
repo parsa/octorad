@@ -18,7 +18,7 @@ int const N = 1 << 20;
 bool are_ranges_same(std::vector<double> const& r1,
     std::vector<double> const& r2, std::string const var_name)
 {
-    auto predicate = [](double const a, double const b) { return a - b < 0.1; };
+    auto predicate = [](double const a, double const b) { return a - b < 0.01; };
     if (!std::equal(r1.begin(), r1.end(), r2.begin(), predicate))
     {
         auto mism = std::mismatch(r1.begin(), r1.end(), r2.begin(), predicate);

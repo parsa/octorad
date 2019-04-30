@@ -9,7 +9,7 @@
 
 constexpr char const* const basepath = "C:\\Users\\Parsa\\Desktop\\arg-dumps\\octotiger-radiation-";
 
-std::vector<double> load_v(std::istream& is)
+std::vector<double> load_v(std::istream& is, std::string var_name)
 {
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
@@ -17,12 +17,12 @@ std::vector<double> load_v(std::istream& is)
     std::vector<double> v(size);
     is.read(reinterpret_cast<char*>(&v[0]), size * sizeof(double));
 
-    std::printf("loaded vector<double>{%zd}.\n", size);
+    std::printf("loaded vector<double>{%zd} %s.\n", size, var_name.c_str());
 
     return v;
 }
 
-std::array<std::vector<double>, NRF> load_a(std::istream& is)
+std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string var_name)
 {
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
@@ -34,30 +34,31 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is)
     std::array<std::vector<double>, NRF> a{};
     for (auto& e : a)
     {
-        e = load_v(is);
+        std::string var_name_i = var_name + "[size_t]";
+        e = load_v(is, var_name_i);
     }
 
-    std::printf("loaded array<vector<size_t>, %zd>.\n", size);
+    std::printf("loaded array<vector<size_t>, %zd> %s.\n", size, var_name.c_str());
 
     return a;
 }
 
-std::int64_t load_i(std::istream& is)
+std::int64_t load_i(std::istream& is, std::string var_name)
 {
     std::int64_t i{};
     is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
 
-    std::printf("loaded std::int64_t.\n");
+    std::printf("loaded int64_t %s.\n", var_name.c_str());
 
     return i;
 }
 
-double load_d(std::istream& is)
+double load_d(std::istream& is, std::string var_name)
 {
     double d{};
     is.read(reinterpret_cast<char*>(&d), sizeof(double));
 
-    std::printf("loaded double.\n");
+    std::printf("loaded double %s.\n", var_name.c_str());
 
     return d;
 }
@@ -75,24 +76,24 @@ fx_args load_case_args(std::size_t index)
     }
 
     fx_args args;
-    args.er_i = load_i(is);
-    args.fx_i = load_i(is);
-    args.fy_i = load_i(is);
-    args.fz_i = load_i(is);
-    args.d = load_i(is);
-    args.rho = std::move(load_v(is));
-    args.sx = std::move(load_v(is));
-    args.sy = std::move(load_v(is));
-    args.sz = std::move(load_v(is));
-    args.egas = std::move(load_v(is));
-    args.tau = std::move(load_v(is));
-    args.fgamma = load_d(is);
-    args.U = std::move(load_a(is));
-    args.mmw = std::move(load_v(is));
-    args.X_spc = std::move(load_v(is));
-    args.Z_spc = std::move(load_v(is));
-    args.dt = load_d(is);
-    args.clightinv = load_d(is);
+    args.er_i = load_i(is, "er_i");
+    args.fx_i = load_i(is, "fx_i");
+    args.fy_i = load_i(is, "fy_i");
+    args.fz_i = load_i(is, "fz_i");
+    args.d = load_i(is, "d");
+    args.rho = std::move(load_v(is, "rho"));
+    args.sx = std::move(load_v(is, "sx"));
+    args.sy = std::move(load_v(is, "sy"));
+    args.sz = std::move(load_v(is, "sz"));
+    args.egas = std::move(load_v(is, "egas"));
+    args.tau = std::move(load_v(is, "tau"));
+    args.fgamma = load_d(is, "fgamma");
+    args.U = std::move(load_a(is, "U"));
+    args.mmw = std::move(load_v(is, "mmw"));
+    args.X_spc = std::move(load_v(is, "X_spc"));
+    args.Z_spc = std::move(load_v(is, "Z_spc"));
+    args.dt = load_d(is, "dt");
+    args.clightinv = load_d(is, "clightinv");
 
     std::printf("loaded case args.\n");
 
@@ -112,11 +113,11 @@ fx_outs load_case_outs(std::size_t index)
     }
 
     fx_outs outs;
-    outs.sx = std::move(load_v(is));
-    outs.sy = std::move(load_v(is));
-    outs.sz = std::move(load_v(is));
-    outs.egas = std::move(load_v(is));
-    outs.U = std::move(load_a(is));
+    outs.sx = std::move(load_v(is, "sx"));
+    outs.sy = std::move(load_v(is, "sy"));
+    outs.sz = std::move(load_v(is, "sz"));
+    outs.egas = std::move(load_v(is, "egas"));
+    outs.U = std::move(load_a(is, "U"));
 
     std::printf("loaded case outputs\n");
 
