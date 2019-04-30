@@ -21,6 +21,7 @@ bool almost_equal(double const a, double const b)
 {
     double const diff = std::abs(a - b);
     //double const largest = std::max(std::abs(a), std::abs(b));
+    //return diff < largest * std::numeric_limits<double>::epsilon();
     return diff < 1e-5;
 }
 
@@ -37,16 +38,18 @@ bool are_ranges_same(std::vector<double> const& r1,
         auto mism =
             std::mismatch(r1.begin(), r1.end(), r2.begin(), almost_equal);
         auto mism_index = std::distance(r1.begin(), mism.first);
-        std::printf("different %s values at %zd: %g != %g.\n", var_name.c_str(),
-            mism_index, *mism.first, *(mism.second - 2));
-        std::printf("different %s values at %zd: %g != %g.\n", var_name.c_str(),
-            mism_index, *mism.first, *(mism.second - 1));
-        std::printf("different %s values at %zd: %g != %g.\n", var_name.c_str(),
+
+        std::printf("different %s[%zd] values: %g != %g.\n", var_name.c_str(),
             mism_index, *mism.first, *mism.second);
-        std::printf("different %s values at %zd: %g != %g.\n", var_name.c_str(),
-            mism_index, *mism.first, *(mism.second + 1));
-        std::printf("different %s values at %zd: %g != %g.\n", var_name.c_str(),
-            mism_index, *mism.first, *(mism.second + 2));
+
+        size_t mism_count = 0;
+        for (; mism.first != r1.end(); ++mism_count)
+        {
+            mism = std::mismatch(
+                ++mism.first, r1.end(), ++mism.second, almost_equal);
+        }
+        std::printf(
+            "different %s values count: %zd.\n", var_name.c_str(), mism_count);
         return false;
     }
     std::printf("identical values of %s.\n", var_name.c_str());
@@ -61,8 +64,6 @@ bool are_ranges_same(std::array<std::vector<double>, NRF> const& r1,
         std::string var_name_i = var_name + "[" + std::to_string(i) + "]";
         if (!are_ranges_same(r1[i], r2[i], var_name_i))
         {
-            std::printf("different %s values at %zd.\n", var_name.c_str(), i);
-
             return false;
         }
     }
@@ -70,37 +71,20 @@ bool are_ranges_same(std::array<std::vector<double>, NRF> const& r1,
     return true;
 }
 
-template <typename F>
-bool check_run_result(fx_case test_case, F fx)
+template <typename K>
+bool check_run_result(fx_case test_case, K kernel)
 {
     fx_args& a = test_case.args;
-    fx(a.opts_eos, a.opts_problem, a.opts_dual_energy_sw1,
+    kernel(a.opts_eos, a.opts_problem, a.opts_dual_energy_sw1,
         a.opts_dual_energy_sw2, a.physcon_A, a.physcon_B, a.physcon_c, a.er_i,
         a.fx_i, a.fy_i, a.fz_i, a.d, a.rho, a.sx, a.sy, a.sz, a.egas, a.tau,
         a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt, a.clightinv);
 
-    if (!are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas"))
-    {
-        return false;
-    }
-    if (!are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx"))
-    {
-        return false;
-    }
-    if (!are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy"))
-    {
-        return false;
-    }
-    if (!are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz"))
-    {
-        return false;
-    }
-    if (!are_ranges_same(test_case.args.U, test_case.outs.U, "U"))
-    {
-        return false;
-    }
-
-    return true;
+    return are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
+        are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
+        are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
+        are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
+        are_ranges_same(test_case.args.U, test_case.outs.U, "U");
 }
 
 bool check_case(size_t index)
@@ -132,7 +116,7 @@ int main()
 {
     std::printf("epsilon: %g\n", std::numeric_limits<double>::epsilon());
     //check_case(4452);
-    for (size_t i = 2410; i >= 0; --i)
+    for (size_t i = 13138; i >= 0; --i)
     {
         if (!check_case(i))
         {
