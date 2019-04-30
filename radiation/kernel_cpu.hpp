@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.hpp"
+
 #include <array>
 #include <vector>
 

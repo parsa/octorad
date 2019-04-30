@@ -1,24 +1,16 @@
+#include "config.hpp"
 #include "kernel_gpu.hpp"
 
-__global__ void kernel(float* x, int n)
+#include <array>
+#include <vector>
+
+void radiation_gpu_kernel(std::int64_t const er_i, std::int64_t const fx_i,
+    std::int64_t const fy_i, std::int64_t const fz_i, std::int64_t const d,
+    std::vector<double> const& rho, std::vector<double>& sx,
+    std::vector<double>& sy, std::vector<double>& sz, std::vector<double>& egas,
+    std::vector<double>& tau, double const fgamma,
+    std::array<std::vector<double>, NRF> U, std::vector<double> const mmw,
+    std::vector<double> const X_spc, std::vector<double> const Z_spc,
+    double const dt, double const clightinv)
 {
-    unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    for (unsigned int i = tid; i < n; i += blockDim.x * gridDim.x)
-    {
-        x[i] = sqrt(pow(3.141592, (int) i));
-    }
-}
-
-void launch_kernel_gpu()
-{
-    //float* data;
-    //cudaMalloc(&data, N * sizeof(float));
-
-    //int n_ = N;
-    //void* args[] = {&data, &n_};
-    //cudaLaunchKernel((void const*)&kernel, 1, 64, args);
-    //kernel<<<1, 64>>>(data, N);
-
-    //cudaStreamSynchronize(0);
 }
