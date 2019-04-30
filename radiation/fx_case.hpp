@@ -10,6 +10,8 @@ struct fx_args
 {
     std::int64_t opts_eos;
     std::int64_t opts_problem;
+    double opts_dual_energy_sw1;
+    double opts_dual_energy_sw2;
     double physcon_A;
     double physcon_B;
     double physcon_c;

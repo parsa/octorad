@@ -5,7 +5,8 @@
 #include <vector>
 
 void radiation_gpu_kernel(std::int64_t const opts_eos,
-    std::int64_t const opts_problem, double const physcon_A,
+    std::int64_t const opts_problem, double const opts_dual_energy_sw1,
+    double const opts_dual_energy_sw2, double const physcon_A,
     double const physcon_B, double const physcon_c, std::int64_t const er_i,
     std::int64_t const fx_i, std::int64_t const fy_i, std::int64_t const fz_i,
     std::int64_t const d, std::vector<double> const& rho,

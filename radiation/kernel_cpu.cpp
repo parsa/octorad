@@ -32,21 +32,36 @@ constexpr inline double INVERSE(double a)
 }
 
 template <class U>
-U B_p(double const physcon_c, U rho, U e, U mmw)
+U B_p(
+    std::int64_t const opts_problem, double const physcon_c, U rho, U e, U mmw)
 {
-    return U((physcon_c / 4.0 / M_PI)) * e;
+    if (opts_problem == MARSHAK)
+    {
+        return U((physcon_c / 4.0 / M_PI)) * e;
+    }
+    std::abort();
 }
 
 template <class U>
-U kappa_p(U rho, U e, U mmw, double X, double Z)
+U kappa_p(
+    std::int64_t const opts_problem, U rho, U e, U mmw, double X, double Z)
 {
-    return MARSHAK_OPAC;
+    if (opts_problem == MARSHAK)
+    {
+        return MARSHAK_OPAC;
+    }
+    std::abort();
 }
 
 template <class U>
-U kappa_R(U rho, U e, U mmw, double X, double Z)
+U kappa_R(
+    std::int64_t const opts_problem, U rho, U e, U mmw, double X, double Z)
 {
-    return MARSHAK_OPAC;
+    if (opts_problem == MARSHAK)
+    {
+        return MARSHAK_OPAC;
+    }
+    std::abort();
 }
 
 template <typename T>
@@ -89,7 +104,7 @@ inline double ztwd_pressure(
 {
     double A = physcon_A;
     double B = physcon_B;
-    const double x = std::pow(d / B, 1.0 / 3.0);
+    double const x = std::pow(d / B, 1.0 / 3.0);
     double p;
     if (x < 0.01)
     {
@@ -194,13 +209,14 @@ space_vector operator*(space_vector const& lhs, double rhs)
     return ret;
 }
 
-std::pair<double, space_vector> implicit_radiation_step(double const physcon_c,
-    double E0, double& e0, space_vector F0, space_vector u0, double rho,
-    double mmw, double X, double Z, double dt)
+std::pair<double, space_vector> implicit_radiation_step(
+    std::int64_t const opts_problem, double const physcon_c, double E0,
+    double& e0, space_vector F0, space_vector u0, double rho, double mmw,
+    double X, double Z, double dt)
 {
     double const c = physcon_c;
-    double kp = kappa_p(rho, e0, mmw, X, Z);
-    double kr = kappa_R(rho, e0, mmw, X, Z);
+    double kp = kappa_p(opts_problem, rho, e0, mmw, X, Z);
+    double kr = kappa_R(opts_problem, rho, e0, mmw, X, Z);
     double const rhoc2 = rho * c * c;
 
     E0 /= rhoc2;
@@ -210,8 +226,9 @@ std::pair<double, space_vector> implicit_radiation_step(double const physcon_c,
     kp *= dt * c;
     kr *= dt * c;
 
-    auto const B = [physcon_c, rho, mmw, c, rhoc2](double e) {
-        return (4.0 * M_PI / c) * B_p(physcon_c, rho, e * rhoc2, mmw) / rhoc2;
+    auto const B = [opts_problem, physcon_c, rho, mmw, c, rhoc2](double e) {
+        return (4.0 * M_PI / c) *
+            B_p(opts_problem, physcon_c, rho, e * rhoc2, mmw) / rhoc2;
     };
 
     auto E = E0;
@@ -262,7 +279,8 @@ std::pair<double, space_vector> implicit_radiation_step(double const physcon_c,
 }
 
 void radiation_cpu_kernel(std::int64_t const opts_eos,
-    std::int64_t const opts_problem, double const physcon_A,
+    std::int64_t const opts_problem, double const opts_dual_energy_sw1,
+    double const opts_dual_energy_sw2, double const physcon_A,
     double const physcon_B, double const physcon_c, std::int64_t const er_i,
     std::int64_t const fx_i, std::int64_t const fy_i, std::int64_t const fz_i,
     std::int64_t const d, std::vector<double> const& rho,
@@ -295,7 +313,7 @@ void radiation_cpu_kernel(std::int64_t const opts_eos,
                 {
                     e0 -= ztwd_energy(physcon_A, physcon_B, den);
                 }
-                if (e0 < egas[iiih] * de_switch2)
+                if (e0 < egas[iiih] * opts_dual_energy_sw2)
                 {
                     e0 = std::pow(tau[iiih], fgamma);
                 }
@@ -313,8 +331,9 @@ void radiation_cpu_kernel(std::int64_t const opts_eos,
                 space_vector u1 = u0;
                 double e1 = e0;
 
-                auto const ddt = implicit_radiation_step(physcon_c, E1, e1, F1,
-                    u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
+                auto const ddt =
+                    implicit_radiation_step(opts_problem, physcon_c, E1, e1, F1,
+                        u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
                 double const dE_dt = ddt.first;
                 double const dFx_dt = ddt.second[0];
                 double const dFy_dt = ddt.second[1];
@@ -340,7 +359,7 @@ void radiation_cpu_kernel(std::int64_t const opts_eos,
                 {
                     e -= ztwd_energy(physcon_A, physcon_B, den);
                 }
-                if (e < de_switch1 * egas[iiih])
+                if (e < opts_dual_energy_sw1 * egas[iiih])
                 {
                     e = e1;
                 }
