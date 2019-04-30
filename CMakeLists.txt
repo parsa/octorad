@@ -5,6 +5,7 @@ project(octorad CXX CUDA)
 # Options
 ###############################################################################
 option(OCTORAD_WITH_PLAYGROUND "" OFF)
+option(OCTORAD_WITH_VC "" OFF)
 
 ###############################################################################
 # Enable C++14
@@ -12,6 +13,25 @@ option(OCTORAD_WITH_PLAYGROUND "" OFF)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+###############################################################################
+# Vc
+###############################################################################
+if(OCTORAD_WITH_VC)
+    find_package(Vc REQUIRED)
+
+    add_library(octorad_vc INTERFACE)
+    target_compile_definitions(octorad_vc INTERFACE OCTORAD_HAVE_VC)
+    target_link_libraries(octorad_vc INTERFACE Vc::Vc)
+    if(USE_AVX2)
+        if(MSVC)
+            target_compile_options(octorad_vc INTERFACE /arch:AVX2)
+        else()
+            target_compile_options(octorad_vc INTERFACE -mavx2)
+        endif()
+        message(STATUS "Enabled AVX2")
+    endif()
+endif()
 
 ###############################################################################
 # Playground
@@ -66,6 +86,9 @@ add_executable(radiation_kernel
 #target_compile_options(radiation_kernel PRIVATE --default-stream per-thread)
 target_compile_definitions(radiation_kernel PRIVATE
     _USE_MATH_DEFINES OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
+if(OCTORAD_WITH_VC)
+    target_link_libraries(radiation_kernel PRIVATE octorad_vc)
+endif()
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --default-stream per-thread")
 
 set_property(TARGET radiation_kernel
