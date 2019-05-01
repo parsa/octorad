@@ -17,6 +17,8 @@
 
 int const N = 1 << 20;
 
+// NOTE: this comparison is too loose.
+// possible reference for improvement: https://stackoverflow.com/q/17333
 bool almost_equal(double const a, double const b)
 {
     double const diff = std::abs(a - b);
@@ -39,7 +41,7 @@ bool are_ranges_same(std::vector<double> const& r1,
             std::mismatch(r1.begin(), r1.end(), r2.begin(), almost_equal);
         auto mism_index = std::distance(r1.begin(), mism.first);
 
-        std::printf("different %s[%zd] values: %g != %g.\n", var_name.c_str(),
+        std::printf("mismatch in %s[%zd]: %g != %g.\n", var_name.c_str(),
             mism_index, *mism.first, *mism.second);
 
         size_t mism_count = 0;
@@ -49,7 +51,7 @@ bool are_ranges_same(std::vector<double> const& r1,
                 ++mism.first, r1.end(), ++mism.second, almost_equal);
         }
         std::printf(
-            "different %s values count: %zd.\n", var_name.c_str(), mism_count);
+            "mismatch count in %s: %zd.\n", var_name.c_str(), mism_count);
         return false;
     }
     std::printf("identical values of %s.\n", var_name.c_str());
@@ -115,7 +117,7 @@ bool check_case(size_t index)
 int main()
 {
     //check_case(227);
-    for (size_t i = 0; i < 13139; ++i)
+    for (size_t i = 225; i < 13139; ++i)
     {
         if (!check_case(i))
         {

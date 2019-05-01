@@ -10,7 +10,7 @@
 
 constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
-std::vector<double> load_v(std::istream& is, std::string const var_name)
+void abort_on_pos_mismatch(std::istream& is)
 {
     std::streampos orig_pos{};
     std::streampos actual_pos = is.tellg();
@@ -26,6 +26,11 @@ std::vector<double> load_v(std::istream& is, std::string const var_name)
     }
     std::printf("matched stream positions: %zd\n",
         static_cast<std::size_t>(actual_pos));
+}
+
+std::vector<double> load_v(std::istream& is, std::string const var_name)
+{
+    abort_on_pos_mismatch(is);
 
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
@@ -40,6 +45,8 @@ std::vector<double> load_v(std::istream& is, std::string const var_name)
 
 std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const var_name)
 {
+    abort_on_pos_mismatch(is);
+
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
     if (size != NRF)
@@ -63,20 +70,24 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const 
 
 std::int64_t load_i(std::istream& is, std::string const var_name)
 {
+    abort_on_pos_mismatch(is);
+
     std::int64_t i{};
     is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
 
-    std::printf("loaded int64_t %s.\n", var_name.c_str());
+    std::printf("loaded int64_t %s = %d.\n", var_name.c_str(), i);
 
     return i;
 }
 
 double load_d(std::istream& is, std::string const var_name)
 {
+    abort_on_pos_mismatch(is);
+
     double d{};
     is.read(reinterpret_cast<char*>(&d), sizeof(double));
 
-    std::printf("loaded double %s.\n", var_name.c_str());
+    std::printf("loaded double %s = %g.\n", var_name.c_str(), d);
 
     return d;
 }
@@ -173,8 +184,8 @@ fx_case import_case(std::size_t index)
 {
     fx_case ret;
 
-    ret.args = std::move(load_case_args(index));
-    ret.outs = std::move(load_case_outs(index));
+    ret.args = load_case_args(index);
+    ret.outs = load_case_outs(index);
 
     std::printf("loaded case %zd.\n", index);
     return ret;
