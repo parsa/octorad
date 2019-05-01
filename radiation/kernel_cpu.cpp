@@ -80,7 +80,7 @@ U B_p(
     {
         return U((physcon_c / 4.0 / M_PI)) * e;
     }
-    std::printf("marshak is the only supported problem type\n");
+    std::printf("error: marshak is the only supported problem type\n");
     std::abort();
 }
 
@@ -92,7 +92,7 @@ U kappa_p(
     {
         return MARSHAK_OPAC;
     }
-    std::printf("marshak is the only supported problem type\n");
+    std::printf("error: marshak is the only supported problem type\n");
     std::abort();
 }
 
@@ -104,7 +104,7 @@ U kappa_R(
     {
         return MARSHAK_OPAC;
     }
-    std::printf("marshak is the only supported problem type\n");
+    std::printf("error: marshak is the only supported problem type\n");
     std::abort();
 }
 

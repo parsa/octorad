@@ -92,7 +92,7 @@ bool check_case(size_t index)
     std::printf("***** load case %zd *****\n", index);
     fx_case const test_case = import_case(index);
 
-    std::printf("***** cpu kernel (the original) *****\n");
+    std::printf("***** cpu kernel (reference) *****\n");
 
     if (!check_run_result(test_case, radiation_cpu_kernel))
     {
@@ -114,8 +114,8 @@ bool check_case(size_t index)
 
 int main()
 {
-    //check_case(4452);
-    for (size_t i = 13138; i >= 0; --i)
+    //check_case(227);
+    for (size_t i = 0; i < 13139; ++i)
     {
         if (!check_case(i))
         {

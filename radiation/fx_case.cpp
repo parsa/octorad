@@ -4,13 +4,29 @@
 #include <array>
 #include <cstdint>
 #include <fstream>
+#include <ios>
 #include <string>
 #include <vector>
 
 constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
-std::vector<double> load_v(std::istream& is, std::string var_name)
+std::vector<double> load_v(std::istream& is, std::string const var_name)
 {
+    std::streampos orig_pos{};
+    std::streampos actual_pos = is.tellg();
+    is.read(reinterpret_cast<char*>(&orig_pos), sizeof(std::streampos));
+
+    if (actual_pos!= orig_pos)
+    {
+        std::printf("error: stream positions do not match. actual: %zd, "
+                    "original: %zd\n",
+            static_cast<std::size_t>(actual_pos),
+            static_cast<std::size_t>(orig_pos));
+        std::abort();
+    }
+    std::printf("matched stream positions: %zd\n",
+        static_cast<std::size_t>(actual_pos));
+
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
 
@@ -22,12 +38,14 @@ std::vector<double> load_v(std::istream& is, std::string var_name)
     return v;
 }
 
-std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string var_name)
+std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const var_name)
 {
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
     if (size != NRF)
     {
+        std::printf(
+            "error: expected array<%zd>, received array<%zd>", NRF, size);
         std::abort();
     }
 
@@ -43,7 +61,7 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string var_na
     return a;
 }
 
-std::int64_t load_i(std::istream& is, std::string var_name)
+std::int64_t load_i(std::istream& is, std::string const var_name)
 {
     std::int64_t i{};
     is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
@@ -53,7 +71,7 @@ std::int64_t load_i(std::istream& is, std::string var_name)
     return i;
 }
 
-double load_d(std::istream& is, std::string var_name)
+double load_d(std::istream& is, std::string const var_name)
 {
     double d{};
     is.read(reinterpret_cast<char*>(&d), sizeof(double));
@@ -71,7 +89,7 @@ fx_args load_case_args(std::size_t index)
 
     if (!is)
     {
-        std::printf("cannot open file \"%s\".", args_fn.c_str());
+        std::printf("error: cannot open args file \"%s\".", args_fn.c_str());
         std::abort();
     }
 
@@ -88,19 +106,29 @@ fx_args load_case_args(std::size_t index)
     args.fy_i = load_i(is, "fy_i");
     args.fz_i = load_i(is, "fz_i");
     args.d = load_i(is, "d");
-    args.rho = std::move(load_v(is, "rho"));
-    args.sx = std::move(load_v(is, "sx"));
-    args.sy = std::move(load_v(is, "sy"));
-    args.sz = std::move(load_v(is, "sz"));
-    args.egas = std::move(load_v(is, "egas"));
-    args.tau = std::move(load_v(is, "tau"));
+    args.rho = load_v(is, "rho");
+    args.sx = load_v(is, "sx");
+    args.sy = load_v(is, "sy");
+    args.sz = load_v(is, "sz");
+    args.egas = load_v(is, "egas");
+    args.tau = load_v(is, "tau");
     args.fgamma = load_d(is, "fgamma");
-    args.U = std::move(load_a(is, "U"));
-    args.mmw = std::move(load_v(is, "mmw"));
-    args.X_spc = std::move(load_v(is, "X_spc"));
-    args.Z_spc = std::move(load_v(is, "Z_spc"));
+    args.U = load_a(is, "U");
+    args.mmw = load_v(is, "mmw");
+    args.X_spc = load_v(is, "X_spc");
+    args.Z_spc = load_v(is, "Z_spc");
     args.dt = load_d(is, "dt");
     args.clightinv = load_d(is, "clightinv");
+
+    if (is.eof())
+    {
+        std::printf("error: end of file not reached. tell: %zd\n",
+            static_cast<std::size_t>(is.tellg()));
+        std::abort();
+    }
+    std::printf("read eof of \"%s\". tell: %zd\n",
+        args_fn.c_str(),
+        static_cast<std::size_t>(is.tellg()));
 
     std::printf("loaded case args.\n");
 
@@ -115,7 +143,7 @@ fx_outs load_case_outs(std::size_t index)
 
     if (!is)
     {
-        std::printf("cannot open file \"%s\".", outs_fn.c_str());
+        std::printf("error: cannot open outs file \"%s\".", outs_fn.c_str());
         std::abort();
     }
 
@@ -125,6 +153,16 @@ fx_outs load_case_outs(std::size_t index)
     outs.sz = std::move(load_v(is, "sz"));
     outs.egas = std::move(load_v(is, "egas"));
     outs.U = std::move(load_a(is, "U"));
+
+    if (is.eof())
+    {
+        std::printf("error: end of file not reached. tell: %zd\n",
+            static_cast<std::size_t>(is.tellg()));
+        std::abort();
+    }
+    std::printf("reached eof of \"%s\". tell: %zd\n",
+        outs_fn.c_str(),
+        static_cast<std::size_t>(is.tellg()));
 
     std::printf("loaded case outputs\n");
 
