@@ -24,7 +24,8 @@ bool almost_equal(double const a, double const b)
     double const diff = std::abs(a - b);
     //double const largest = std::max(std::abs(a), std::abs(b));
     //return diff < largest * std::numeric_limits<double>::epsilon();
-    return diff < 1e-5;
+    //return diff < 1e-5;
+    return diff <= std::numeric_limits<double>::epsilon();
 }
 
 bool are_ranges_same(std::vector<double> const& r1,
@@ -54,7 +55,7 @@ bool are_ranges_same(std::vector<double> const& r1,
             "mismatch count in %s: %zd.\n", var_name.c_str(), mism_count);
         return false;
     }
-    std::printf("identical values of %s.\n", var_name.c_str());
+    //std::printf("identical values of %s.\n", var_name.c_str());
     return true;
 }
 
@@ -69,7 +70,7 @@ bool are_ranges_same(std::array<std::vector<double>, NRF> const& r1,
             return false;
         }
     }
-    std::printf("identical values of %s.\n", var_name.c_str());
+    //std::printf("identical values of %s.\n", var_name.c_str());
     return true;
 }
 
@@ -82,11 +83,13 @@ bool check_run_result(fx_case test_case, K kernel)
         a.fx_i, a.fy_i, a.fz_i, a.d, a.rho, a.sx, a.sy, a.sz, a.egas, a.tau,
         a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt, a.clightinv);
 
-    return are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
+    bool result =
+        are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
         are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
         are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
         are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
         are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+    return result;
 }
 
 bool check_case(size_t index)
@@ -98,10 +101,10 @@ bool check_case(size_t index)
 
     if (!check_run_result(test_case, radiation_cpu_kernel))
     {
-        std::printf("code integrity check failed.\n");
+        std::printf("case %zd code integrity check failed.\n", index);
         return false;
     }
-    std::printf("code integrity check passed.\n");
+    std::printf("case %zd code integrity check passed.\n", index);
 
     std::printf("***** gpu kernel (ported code) *****\n");
     if (!check_run_result(test_case, radiation_gpu_kernel))
@@ -116,14 +119,16 @@ bool check_case(size_t index)
 
 int main()
 {
-    //check_case(227);
-    for (size_t i = 225; i < 13139; ++i)
-    {
-        if (!check_case(i))
-        {
-            return 1;
-        }
-    }
+    check_case(78);
+
+    //constexpr std::size_t case_count = 13140;
+    //for (std::size_t i = 0 ; i < case_count; ++i)
+    //{
+    //    if (!check_case(i))
+    //    {
+    //        return 1;
+    //    }
+    //}
 
     return 0;
 }

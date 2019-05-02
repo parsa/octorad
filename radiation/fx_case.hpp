@@ -3,6 +3,7 @@
 #include "config.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -46,8 +47,11 @@ struct fx_outs
 
 struct fx_case
 {
+    std::size_t index{};
     fx_args args;
     fx_outs outs;
 };
 
+fx_args load_case_args(std::size_t index);
+fx_outs load_case_outs(std::size_t index);
 fx_case import_case(std::size_t index);

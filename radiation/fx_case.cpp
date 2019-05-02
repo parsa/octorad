@@ -24,8 +24,8 @@ void abort_on_pos_mismatch(std::istream& is)
             static_cast<std::size_t>(orig_pos));
         std::abort();
     }
-    std::printf("matched stream positions: %zd\n",
-        static_cast<std::size_t>(actual_pos));
+    //std::printf("matched stream positions: %zd\n",
+    //    static_cast<std::size_t>(actual_pos));
 }
 
 std::vector<double> load_v(std::istream& is, std::string const var_name)
@@ -38,7 +38,7 @@ std::vector<double> load_v(std::istream& is, std::string const var_name)
     std::vector<double> v(size);
     is.read(reinterpret_cast<char*>(&v[0]), size * sizeof(double));
 
-    std::printf("loaded vector<double>{%zd} %s.\n", size, var_name.c_str());
+    //std::printf("loaded vector<double>{%zd} %s.\n", size, var_name.c_str());
 
     return v;
 }
@@ -63,7 +63,7 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const 
         e = load_v(is, var_name_i);
     }
 
-    std::printf("loaded array<vector<size_t>, %zd> %s.\n", size, var_name.c_str());
+    //std::printf("loaded array<vector<size_t>, %zd> %s.\n", size, var_name.c_str());
 
     return a;
 }
@@ -75,7 +75,7 @@ std::int64_t load_i(std::istream& is, std::string const var_name)
     std::int64_t i{};
     is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
 
-    std::printf("loaded int64_t %s = %d.\n", var_name.c_str(), i);
+    //std::printf("loaded int64_t %s = %d.\n", var_name.c_str(), i);
 
     return i;
 }
@@ -87,7 +87,7 @@ double load_d(std::istream& is, std::string const var_name)
     double d{};
     is.read(reinterpret_cast<char*>(&d), sizeof(double));
 
-    std::printf("loaded double %s = %g.\n", var_name.c_str(), d);
+    //std::printf("loaded double %s = %g.\n", var_name.c_str(), d);
 
     return d;
 }
@@ -137,11 +137,11 @@ fx_args load_case_args(std::size_t index)
             static_cast<std::size_t>(is.tellg()));
         std::abort();
     }
-    std::printf("read eof of \"%s\". tell: %zd\n",
-        args_fn.c_str(),
-        static_cast<std::size_t>(is.tellg()));
+    //std::printf("read eof of \"%s\". tell: %zd\n",
+    //    args_fn.c_str(),
+    //    static_cast<std::size_t>(is.tellg()));
 
-    std::printf("loaded case args.\n");
+    //std::printf("loaded case args.\n");
 
     return args;
 }
@@ -171,11 +171,11 @@ fx_outs load_case_outs(std::size_t index)
             static_cast<std::size_t>(is.tellg()));
         std::abort();
     }
-    std::printf("reached eof of \"%s\". tell: %zd\n",
-        outs_fn.c_str(),
-        static_cast<std::size_t>(is.tellg()));
+    //std::printf("reached eof of \"%s\". tell: %zd\n",
+    //    outs_fn.c_str(),
+    //    static_cast<std::size_t>(is.tellg()));
 
-    std::printf("loaded case outputs\n");
+    //std::printf("loaded case outputs\n");
 
     return outs;
 }
@@ -184,9 +184,10 @@ fx_case import_case(std::size_t index)
 {
     fx_case ret;
 
+    ret.index = index;
     ret.args = load_case_args(index);
     ret.outs = load_case_outs(index);
 
-    std::printf("loaded case %zd.\n", index);
+    //std::printf("loaded case %zd.\n", index);
     return ret;
 }
