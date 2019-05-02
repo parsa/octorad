@@ -297,4 +297,18 @@ void radiation_gpu_kernel(
         &U[2][0], d_U0, U[2].size() * sizeof(double), cudaMemcpyDeviceToHost));
     abort_if_cuda_error(cudaMemcpy(
         &U[3][0], d_U0, U[3].size() * sizeof(double), cudaMemcpyDeviceToHost));
+
+    abort_if_cuda_error(cudaFree(d_rho));
+    abort_if_cuda_error(cudaFree(d_sx));
+    abort_if_cuda_error(cudaFree(d_sy));
+    abort_if_cuda_error(cudaFree(d_sz));
+    abort_if_cuda_error(cudaFree(d_egas));
+    abort_if_cuda_error(cudaFree(d_tau));
+    abort_if_cuda_error(cudaFree(d_U0));
+    abort_if_cuda_error(cudaFree(d_U1));
+    abort_if_cuda_error(cudaFree(d_U2));
+    abort_if_cuda_error(cudaFree(d_U3));
+    abort_if_cuda_error(cudaFree(d_mmw));
+    abort_if_cuda_error(cudaFree(d_X_spc));
+    abort_if_cuda_error(cudaFree(d_Z_spc));
 }
