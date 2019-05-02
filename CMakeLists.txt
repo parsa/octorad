@@ -5,6 +5,7 @@ project(octorad CXX CUDA)
 # Options
 ###############################################################################
 option(OCTORAD_WITH_PLAYGROUND "" OFF)
+option(OCTORAD_WITH_SCRATCHPAD "" OFF)
 option(OCTORAD_WITH_VC "" OFF)
 
 ###############################################################################
@@ -35,6 +36,15 @@ if(OCTORAD_WITH_VC)
 endif()
 
 ###############################################################################
+# Testpad
+###############################################################################
+if(OCTORAD_WITH_SCRATCHPAD)
+    add_executable(scratchpad-01 scratchpad/scratchpad-01.cu)
+    set_property(TARGET scratchpad-01
+        PROPERTY FOLDER "Scratchpad")
+endif()
+
+###############################################################################
 # Playground
 ###############################################################################
 if(OCTORAD_WITH_PLAYGROUND)
@@ -47,21 +57,21 @@ if(OCTORAD_WITH_PLAYGROUND)
     set_property(TARGET 02-hi
         PROPERTY FOLDER "Playground/02")
 
-###############################################################################
-# Streams
-###############################################################################
-add_executable(03-stream_legacy playground/03-multistream.cu)
-add_executable(03-stream_per_thread playground/03-multistream.cu)
-target_compile_options(03-stream_per_thread PRIVATE --default-stream per-thread)
-set_property(TARGET 03-stream_legacy 03-stream_per_thread
-    PROPERTY FOLDER "Playground/Streams")
+    ###########################################################################
+    # Streams
+    ###########################################################################
+    add_executable(03-stream_legacy playground/03-multistream.cu)
+    add_executable(03-stream_per_thread playground/03-multistream.cu)
+    target_compile_options(03-stream_per_thread PRIVATE --default-stream per-thread)
+    set_property(TARGET 03-stream_legacy 03-stream_per_thread
+        PROPERTY FOLDER "Playground/Streams")
 
-add_executable(04-stdthreads_legacy playground/04-thread_test.cu)
-add_executable(04-stdthreads_per_thread playground/04-thread_test.cu)
-target_compile_options(04-stdthreads_per_thread PRIVATE --default-stream per-thread)
+    add_executable(04-stdthreads_legacy playground/04-thread_test.cu)
+    add_executable(04-stdthreads_per_thread playground/04-thread_test.cu)
+    target_compile_options(04-stdthreads_per_thread PRIVATE --default-stream per-thread)
 
-set_property(TARGET 04-stdthreads_legacy 04-stdthreads_per_thread
-    PROPERTY FOLDER "Playground/Streams")
+    set_property(TARGET 04-stdthreads_legacy 04-stdthreads_per_thread
+        PROPERTY FOLDER "Playground/Streams")
 endif()
 
 ###############################################################################
