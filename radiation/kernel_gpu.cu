@@ -259,7 +259,8 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F c
     }
     // Error is not smaller that error tolerance after performed iterations. Abort.
     std::printf("Implicit radiation solver failed to converge\n");
-    assert(false);
+    // HACK: disabled since it prevented nvprof from showing device utilization info
+    // assert(false);
 }
 
 __device__ d_pair<double, space_vector> implicit_radiation_step(
@@ -359,9 +360,9 @@ __global__ void radiation_impl(
     double const dt,
     double const clightinv)
 {
-    std::int64_t i = threadIdx.x;
-    std::int64_t j = threadIdx.y;
-    std::int64_t k = threadIdx.z;
+    std::int64_t i = threadIdx.x + RAD_BW;
+    std::int64_t j = threadIdx.y + RAD_BW;
+    std::int64_t k = threadIdx.z + RAD_BW;
 
     std::int64_t const iiih = hindex(i + d, j + d, k + d);
     std::int64_t const iiir = rindex(i, j, k);
@@ -443,7 +444,7 @@ __global__ void radiation_impl(
     tau[iiih] = std::pow(e, INVERSE(fgamma));
     if (Uij(U, Ui_size, er_i, iiir) <= 0.0)
     {
-        //std::printf("2231242!!! %e %e %e \n", E0, Uij(U, Ui_size, er_i, iiir), dE_dt * dt);
+        std::printf("2231242!!! %e %e %e \n", E0, Uij(U, Ui_size, er_i, iiir), dE_dt * dt);
         assert(false);
     }
     if (opts_problem == MARSHAK)
@@ -525,7 +526,10 @@ void radiation_gpu_kernel(
         cudaMemcpy(d_Z_spc, &Z_spc[0], Z_spc.size(), cudaMemcpyHostToDevice));
 
     //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
-    radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
+    // NOTE: too many registers (currently 168)
+    // HACK: changed from dim3(1, loop_iterations, loop_iterations) so it fits
+    // on the device
+    radiation_impl<<<1, dim3(1, loop_iterations, loop_iterations)>>>(
         opts_eos,
         opts_problem,
         opts_dual_energy_sw1,
