@@ -214,6 +214,52 @@ void throw_if_cuda_error()
     throw_if_cuda_error(err);
 }
 
+template <typename T>
+T* alloc_copy_device(std::vector<T> const& v)
+{
+    T* device_ptr;
+    cudaMalloc((void**) &device_ptr, v.size() * sizeof(T));
+    throw_if_cuda_error(
+        cudaMemcpy(device_ptr, &v[0], v.size(), cudaMemcpyHostToDevice));
+    return device_ptr;
+}
+
+template <typename T, std::size_t N>
+T* alloc_copy_device(std::array<std::vector<T>, N> const& a)
+{
+    T* device_ptr;
+    cudaMalloc((void**) &device_ptr, NRF * a[0].size() * sizeof(T));
+    for (std::size_t i = 0; i < NRF; ++i)
+    {
+        throw_if_cuda_error(cudaMemcpy(device_ptr + i * a.size(), &a[i][0],
+            a[i].size(), cudaMemcpyHostToDevice));
+    }
+    return device_ptr;
+}
+
+template <typename T>
+void copy_from_device(T* device_ptr, std::vector<T>& v)
+{
+    throw_if_cuda_error(cudaMemcpy(
+        &v[0], device_ptr, v.size() * sizeof(T), cudaMemcpyDeviceToHost));
+}
+
+template <typename T, std::size_t N>
+void copy_from_device(T* device_ptr, std::array<std::vector<T>, N>& a)
+{
+    for (std::size_t i = 0; i < NRF; ++i)
+    {
+        throw_if_cuda_error(cudaMemcpy(&a[i][0], device_ptr + i * a[i].size(),
+            a[i].size() * sizeof(T), cudaMemcpyDeviceToHost));
+    }
+}
+
+template <typename T>
+void free_device(T const* device_ptr)
+{
+    throw_if_cuda_error(cudaFree((void*) device_ptr));
+}
+
 template <typename F>
 __device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F const test,
     double const E, double const eg_t)
@@ -379,11 +425,11 @@ __global__ void radiation_impl(
     e0 -= 0.5 * vz * vz * den;
     if (opts_eos == eos_wd)
     {
-    //    e0 -= ztwd_energy(physcon_A, physcon_B, den);
+        e0 -= ztwd_energy(physcon_A, physcon_B, den);
     }
     if (e0 < egas[iiih] * opts_dual_energy_sw2)
     {
-    //    e0 = std::pow(tau[iiih], fgamma);
+        e0 = pow(tau[iiih], fgamma);
     }
     double E0 = Uij(U, Ui_size, er_i, iiir);
     space_vector F0;
@@ -481,49 +527,16 @@ void radiation_gpu_kernel(
     double const dt,
     double const clightinv)
 {
-    double* d_rho{};
-    cudaMalloc((void**) &d_rho, rho.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_rho, &rho[0], rho.size(), cudaMemcpyHostToDevice));
-    double* d_sx{};
-    cudaMalloc((void**) &d_sx, sx.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_sx, &sx[0], sx.size(), cudaMemcpyHostToDevice));
-    double* d_sy{};
-    cudaMalloc((void**) &d_sy, sy.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_sy, &sy[0], sy.size(), cudaMemcpyHostToDevice));
-    double* d_sz{};
-    cudaMalloc((void**) &d_sz, sz.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_sz, &sz[0], sz.size(), cudaMemcpyHostToDevice));
-    double* d_egas{};
-    cudaMalloc((void**) &d_egas, egas.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_egas, &egas[0], egas.size(), cudaMemcpyHostToDevice));
-    double* d_tau{};
-    cudaMalloc((void**) &d_tau, tau.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_tau, &tau[0], tau.size(), cudaMemcpyHostToDevice));
-    double* d_U;
-    cudaMalloc((void**) &d_U, NRF * U[0].size() * sizeof(double));
-    for (std::size_t i = 0; i < NRF; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(
-            d_U + i * U.size(), &U[i][0], U[i].size(), cudaMemcpyHostToDevice));
-    }
-    double* d_mmw{};
-    cudaMalloc((void**) &d_mmw, mmw.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_mmw, &mmw[0], mmw.size(), cudaMemcpyHostToDevice));
-    double* d_X_spc{};
-    cudaMalloc((void**) &d_X_spc, X_spc.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_X_spc, &X_spc[0], X_spc.size(), cudaMemcpyHostToDevice));
-    double* d_Z_spc{};
-    cudaMalloc((void**) &d_Z_spc, Z_spc.size() * sizeof(double));
-    throw_if_cuda_error(
-        cudaMemcpy(d_Z_spc, &Z_spc[0], Z_spc.size(), cudaMemcpyHostToDevice));
+    double* d_rho = alloc_copy_device(rho);
+    double* d_sx = alloc_copy_device(sx);
+    double* d_sy = alloc_copy_device(sy);
+    double* d_sz = alloc_copy_device(sz);
+    double* d_egas = alloc_copy_device(egas);
+    double* d_tau = alloc_copy_device(tau);
+    double* d_U = alloc_copy_device(U);
+    double* d_mmw = alloc_copy_device(mmw);
+    double* d_X_spc = alloc_copy_device(X_spc);
+    double* d_Z_spc = alloc_copy_device(Z_spc);
 
     //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
     // NOTE: too many registers (currently 168)
@@ -558,28 +571,20 @@ void radiation_gpu_kernel(
         );
     throw_if_cuda_error();
 
-    throw_if_cuda_error(cudaMemcpy(
-        &sx[0], d_sx, sx.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    throw_if_cuda_error(cudaMemcpy(
-        &sy[0], d_sy, sy.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    throw_if_cuda_error(cudaMemcpy(
-        &sz[0], d_sz, sz.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    throw_if_cuda_error(cudaMemcpy(&egas[0], d_egas,
-        egas.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    for (std::size_t i = 0; i < NRF; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(&U[i][0], d_U + i * U[i].size(),
-            U[i].size() * sizeof(double), cudaMemcpyDeviceToHost));
-    }
+    copy_from_device(d_sx, sx);
+    copy_from_device(d_sy, sy);
+    copy_from_device(d_sz, sz);
+    copy_from_device(d_egas, egas);
+    copy_from_device(d_U, U);
 
-    throw_if_cuda_error(cudaFree(d_rho));
-    throw_if_cuda_error(cudaFree(d_sx));
-    throw_if_cuda_error(cudaFree(d_sy));
-    throw_if_cuda_error(cudaFree(d_sz));
-    throw_if_cuda_error(cudaFree(d_egas));
-    throw_if_cuda_error(cudaFree(d_tau));
-    throw_if_cuda_error(cudaFree(d_U));
-    throw_if_cuda_error(cudaFree(d_mmw));
-    throw_if_cuda_error(cudaFree(d_X_spc));
-    throw_if_cuda_error(cudaFree(d_Z_spc));
+    free_device(d_rho);
+    free_device(d_sx);
+    free_device(d_sy);
+    free_device(d_sz);
+    free_device(d_egas);
+    free_device(d_tau);
+    free_device(d_U);
+    free_device(d_mmw);
+    free_device(d_X_spc);
+    free_device(d_Z_spc);
 }
