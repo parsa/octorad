@@ -86,7 +86,8 @@ message(STATUS "OCTORAD_DUMP_DIR is set to: " ${OCTORAD_DUMP_DIR})
 add_executable(radiation_kernel
     radiation/main.cpp
     radiation/config.hpp
-    radiation/config.cpp
+    radiation/util.hpp
+    radiation/util.cpp
     radiation/fx_case.hpp
     radiation/fx_case.cpp
     radiation/kernel_cpu.hpp
@@ -101,7 +102,7 @@ target_compile_definitions(radiation_kernel PRIVATE
 if(OCTORAD_WITH_VC)
     target_link_libraries(radiation_kernel PRIVATE octorad_vc)
 endif()
-target_compile_options(radiation_kernel INTERFACE --default-stream per-thread)
+#target_compile_options(radiation_kernel PRIVATE --default-stream per-thread -Xptxas -v)
 # improve incremental build performance (only recompile and link modified units)
 #set_target_properties(radiation_kernel PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
