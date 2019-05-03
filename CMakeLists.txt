@@ -83,7 +83,17 @@ if(NOT EXISTS ${OCTORAD_DUMP_DIR} OR NOT IS_DIRECTORY ${OCTORAD_DUMP_DIR})
 endif()
 message(STATUS "OCTORAD_DUMP_DIR is set to: " ${OCTORAD_DUMP_DIR})
 
-add_executable(radiation_kernel
+add_library(radiation_kernel radiation/kernel_gpu.cu)
+target_compile_definitions(radiation_kernel PRIVATE
+    _USE_MATH_DEFINES)
+#target_compile_features(radiation_kernel PUBLIC cxx_std_17)
+#target_compile_options(radiation_kernel PRIVATE --default-stream per-thread)
+target_compile_options(radiation_kernel PRIVATE --default-stream per-thread -Xptxas -v)
+#set(CMAKE_CUDA_FLAGS "--default-stream per-thread -Xptxas -v")
+## improve incremental build performance (only recompile and link modified units)
+#set_target_properties(radiation_kernel PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+add_executable(radiation_kernel_tester
     radiation/main.cpp
     radiation/config.hpp
     radiation/util.hpp
@@ -93,20 +103,15 @@ add_executable(radiation_kernel
     radiation/kernel_cpu.hpp
     radiation/kernel_cpu.cpp
     radiation/kernel_gpu.hpp
-    radiation/kernel_gpu.cu
 )
-#target_compile_features(particles PUBLIC cxx_std_17)
-#target_compile_options(radiation_kernel PRIVATE --default-stream per-thread)
-target_compile_definitions(radiation_kernel PRIVATE
+target_compile_definitions(radiation_kernel_tester PRIVATE
     _USE_MATH_DEFINES OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
+target_link_libraries(radiation_kernel_tester PRIVATE radiation_kernel)
 if(OCTORAD_WITH_VC)
-    target_link_libraries(radiation_kernel PRIVATE octorad_vc)
+    target_link_libraries(radiation_kernel_tester PRIVATE octorad_vc)
 endif()
-#target_compile_options(radiation_kernel PRIVATE --default-stream per-thread -Xptxas -v)
-# improve incremental build performance (only recompile and link modified units)
-#set_target_properties(radiation_kernel PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_property(TARGET radiation_kernel
+set_property(TARGET radiation_kernel radiation_kernel_tester
     PROPERTY FOLDER "Octo-tiger")
 
 ###############################################################################
@@ -114,7 +119,7 @@ set_property(TARGET radiation_kernel
 ###############################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY
-    VS_STARTUP_PROJECT radiation_kernel)
+    VS_STARTUP_PROJECT radiation_kernel_tester)
 
 ###############################################################################
 # Tests

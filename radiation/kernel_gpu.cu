@@ -302,7 +302,7 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F c
         }
     }
     // Error is not smaller that error tolerance after performed iterations. Abort.
-    std::printf("Implicit radiation solver failed to converge\n");
+    std::printf("implicit radiation solver failed to converge\n");
     // HACK: disabled since it prevented nvprof from showing device utilization info
     // assert(false);
 }
