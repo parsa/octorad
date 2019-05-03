@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include "fx_case.hpp"
+#include "util.hpp"
 
 #include <array>
 #include <cstdint>
@@ -18,11 +19,10 @@ void abort_on_pos_mismatch(std::istream& is)
 
     if (actual_pos!= orig_pos)
     {
-        std::printf("error: stream positions do not match. actual: %zd, "
-                    "original: %zd\n",
-            static_cast<std::size_t>(actual_pos),
-            static_cast<std::size_t>(orig_pos));
-        std::abort();
+        throw formatted_exception(
+            "error: stream positions do not match. actual: %, original: %",
+            actual_pos,
+            orig_pos);
     }
     //std::printf("matched stream positions: %zd\n",
     //    static_cast<std::size_t>(actual_pos));
@@ -51,9 +51,8 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const 
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
     if (size != NRF)
     {
-        std::printf(
-            "error: expected array<%zd>, received array<%zd>", NRF, size);
-        std::abort();
+        throw formatted_exception(
+            "error: expected array<%>, received array<%>", NRF, size);
     }
 
     std::array<std::vector<double>, NRF> a{};
@@ -100,8 +99,8 @@ fx_args load_case_args(std::size_t index)
 
     if (!is)
     {
-        std::printf("error: cannot open args file \"%s\".", args_fn.c_str());
-        std::abort();
+        throw formatted_exception(
+            "error: cannot open args file \"%\".", args_fn.c_str());
     }
 
     fx_args args;
@@ -133,9 +132,8 @@ fx_args load_case_args(std::size_t index)
 
     if (is.eof())
     {
-        std::printf("error: end of file not reached. tell: %zd\n",
-            static_cast<std::size_t>(is.tellg()));
-        std::abort();
+        throw formatted_exception(
+            "error: end of file not reached. tell: %\n", is.tellg());
     }
     //std::printf("read eof of \"%s\". tell: %zd\n",
     //    args_fn.c_str(),
@@ -154,8 +152,7 @@ fx_outs load_case_outs(std::size_t index)
 
     if (!is)
     {
-        std::printf("error: cannot open outs file \"%s\".", outs_fn.c_str());
-        std::abort();
+        throw formatted_exception("error: cannot open outs file \"%\".", outs_fn.c_str());
     }
 
     fx_outs outs;
@@ -167,9 +164,8 @@ fx_outs load_case_outs(std::size_t index)
 
     if (is.eof())
     {
-        std::printf("error: end of file not reached. tell: %zd\n",
-            static_cast<std::size_t>(is.tellg()));
-        std::abort();
+        throw formatted_exception(
+            "error: end of file not reached. tell: %\n", is.tellg());
     }
     //std::printf("reached eof of \"%s\". tell: %zd\n",
     //    outs_fn.c_str(),

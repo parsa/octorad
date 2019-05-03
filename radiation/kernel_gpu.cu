@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
+#include <sstream>
 #include <vector>
 
 #include "cuda_runtime.h"
@@ -196,19 +198,20 @@ __device__ inline double& Uij(
     return U[i * Ui_size + j];
 }
 
-void abort_if_cuda_error(cudaError_t err)
+void throw_if_cuda_error(cudaError_t err)
 {
     if (err != cudaSuccess)
     {
-        std::printf("cuda error: %s\n", cudaGetErrorString(err));
-        assert(false);
+        std::stringstream err_ss;
+        err_ss << "cuda error: " << cudaGetErrorString(err);
+        throw std::runtime_error(err_ss.str());
     }
 }
 
-void abort_if_cuda_error()
+void throw_if_cuda_error()
 {
     cudaError_t err = cudaGetLastError();
-    abort_if_cuda_error(err);
+    throw_if_cuda_error(err);
 }
 
 template <typename F>
@@ -479,46 +482,46 @@ void radiation_gpu_kernel(
 {
     double* d_rho{};
     cudaMalloc((void**) &d_rho, rho.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_rho, &rho[0], rho.size(), cudaMemcpyHostToDevice));
     double* d_sx{};
     cudaMalloc((void**) &d_sx, sx.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_sx, &sx[0], sx.size(), cudaMemcpyHostToDevice));
     double* d_sy{};
     cudaMalloc((void**) &d_sy, sy.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_sy, &sy[0], sy.size(), cudaMemcpyHostToDevice));
     double* d_sz{};
     cudaMalloc((void**) &d_sz, sz.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_sz, &sz[0], sz.size(), cudaMemcpyHostToDevice));
     double* d_egas{};
     cudaMalloc((void**) &d_egas, egas.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_egas, &egas[0], egas.size(), cudaMemcpyHostToDevice));
     double* d_tau{};
     cudaMalloc((void**) &d_tau, tau.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_tau, &tau[0], tau.size(), cudaMemcpyHostToDevice));
     double* d_U;
     cudaMalloc((void**) &d_U, NRF * U[0].size() * sizeof(double));
     for (std::size_t i = 0; i < NRF; ++i)
     {
-        abort_if_cuda_error(cudaMemcpy(
+        throw_if_cuda_error(cudaMemcpy(
             d_U + i * U.size(), &U[i][0], U[i].size(), cudaMemcpyHostToDevice));
     }
     double* d_mmw{};
     cudaMalloc((void**) &d_mmw, mmw.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_mmw, &mmw[0], mmw.size(), cudaMemcpyHostToDevice));
     double* d_X_spc{};
     cudaMalloc((void**) &d_X_spc, X_spc.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_X_spc, &X_spc[0], X_spc.size(), cudaMemcpyHostToDevice));
     double* d_Z_spc{};
     cudaMalloc((void**) &d_Z_spc, Z_spc.size() * sizeof(double));
-    abort_if_cuda_error(
+    throw_if_cuda_error(
         cudaMemcpy(d_Z_spc, &Z_spc[0], Z_spc.size(), cudaMemcpyHostToDevice));
 
     //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
@@ -549,30 +552,30 @@ void radiation_gpu_kernel(
         dt,
         clightinv
         );
-    abort_if_cuda_error();
+    throw_if_cuda_error();
 
-    abort_if_cuda_error(cudaMemcpy(
+    throw_if_cuda_error(cudaMemcpy(
         &sx[0], d_sx, sx.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    abort_if_cuda_error(cudaMemcpy(
+    throw_if_cuda_error(cudaMemcpy(
         &sy[0], d_sy, sy.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    abort_if_cuda_error(cudaMemcpy(
+    throw_if_cuda_error(cudaMemcpy(
         &sz[0], d_sz, sz.size() * sizeof(double), cudaMemcpyDeviceToHost));
-    abort_if_cuda_error(cudaMemcpy(&egas[0], d_egas,
+    throw_if_cuda_error(cudaMemcpy(&egas[0], d_egas,
         egas.size() * sizeof(double), cudaMemcpyDeviceToHost));
     for (std::size_t i = 0; i < NRF; ++i)
     {
-        abort_if_cuda_error(cudaMemcpy(&U[i][0], d_U + i * U[i].size(),
+        throw_if_cuda_error(cudaMemcpy(&U[i][0], d_U + i * U[i].size(),
             U[i].size() * sizeof(double), cudaMemcpyDeviceToHost));
     }
 
-    abort_if_cuda_error(cudaFree(d_rho));
-    abort_if_cuda_error(cudaFree(d_sx));
-    abort_if_cuda_error(cudaFree(d_sy));
-    abort_if_cuda_error(cudaFree(d_sz));
-    abort_if_cuda_error(cudaFree(d_egas));
-    abort_if_cuda_error(cudaFree(d_tau));
-    abort_if_cuda_error(cudaFree(d_U));
-    abort_if_cuda_error(cudaFree(d_mmw));
-    abort_if_cuda_error(cudaFree(d_X_spc));
-    abort_if_cuda_error(cudaFree(d_Z_spc));
+    throw_if_cuda_error(cudaFree(d_rho));
+    throw_if_cuda_error(cudaFree(d_sx));
+    throw_if_cuda_error(cudaFree(d_sy));
+    throw_if_cuda_error(cudaFree(d_sz));
+    throw_if_cuda_error(cudaFree(d_egas));
+    throw_if_cuda_error(cudaFree(d_tau));
+    throw_if_cuda_error(cudaFree(d_U));
+    throw_if_cuda_error(cudaFree(d_mmw));
+    throw_if_cuda_error(cudaFree(d_X_spc));
+    throw_if_cuda_error(cudaFree(d_Z_spc));
 }

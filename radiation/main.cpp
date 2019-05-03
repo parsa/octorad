@@ -119,16 +119,22 @@ bool check_case(size_t index)
 
 int main()
 {
-    check_case(78);
-
-    //constexpr std::size_t case_count = 13140;
-    //for (std::size_t i = 0 ; i < case_count; ++i)
-    //{
-    //    if (!check_case(i))
-    //    {
-    //        return 1;
-    //    }
-    //}
+    try
+    {
+        check_case(78);
+        //constexpr std::size_t case_count = 13140;
+        //for (std::size_t i = 0 ; i < case_count; ++i)
+        //{
+        //    if (!check_case(i))
+        //    {
+        //        return 1;
+        //    }
+        //}
+    }
+    catch (std::exception const& e)
+    {
+        std::printf("exception thrown: %s\n", e.what());
+    }
 
     return 0;
 }

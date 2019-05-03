@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 constexpr size_t NRF = 4;
 constexpr std::size_t NDIM = 3;

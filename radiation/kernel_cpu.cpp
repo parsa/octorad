@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include "kernel_cpu.hpp"
+#include "util.hpp"
 
 #include <algorithm>
 #include <array>
@@ -79,8 +80,7 @@ namespace reference_implementation {
         {
             return U((physcon_c / 4.0 / M_PI)) * e;
         }
-        std::printf("error: marshak is the only supported problem type\n");
-        std::abort();
+        throw formatted_exception("error: marshak is the only supported problem type\n");
     }
 
     template <class U>
@@ -91,8 +91,7 @@ namespace reference_implementation {
         {
             return MARSHAK_OPAC;
         }
-        std::printf("error: marshak is the only supported problem type\n");
-        std::abort();
+        throw formatted_exception("error: marshak is the only supported problem type\n");
     }
 
     template <class U>
@@ -103,8 +102,7 @@ namespace reference_implementation {
         {
             return MARSHAK_OPAC;
         }
-        std::printf("error: marshak is the only supported problem type\n");
-        std::abort();
+        throw formatted_exception("error: marshak is the only supported problem type\n");
     }
 
     template <typename T>
@@ -126,8 +124,7 @@ namespace reference_implementation {
         double B = physcon_B;
         if (d < 0.0)
         {
-            std::printf("d = %e in ztwd_enthalpy\n", d);
-            std::abort();
+            throw formatted_exception("d = % in ztwd_enthalpy\n", d);
         }
         double const x = std::pow(d / B, 1.0 / 3.0);
         double h;
@@ -216,8 +213,7 @@ namespace reference_implementation {
             }
         }
         // Error is not smaller that error tolerance after performed iterations. Abort.
-        std::printf("Implicit radiation solver failed to converge\n");
-        std::abort();
+        throw formatted_exception("Implicit radiation solver failed to converge\n");
     }
 
     std::pair<double, space_vector> implicit_radiation_step(
@@ -384,17 +380,15 @@ namespace reference_implementation {
                     }
                     if (U[er_i][iiir] <= 0.0)
                     {
-                        std::printf(
-                            "Er = %e %e %e %e\n", E0, E1, U[er_i][iiir], dt);
-                        std::abort();
+                        throw formatted_exception(
+                            "Er = % % % %\n", E0, E1, U[er_i][iiir], dt);
                     }
                     e = std::max(e, 0.0);
                     tau[iiih] = std::pow(e, INVERSE(fgamma));
                     if (U[er_i][iiir] <= 0.0)
                     {
-                        std::printf("2231242!!! %e %e %e \n", E0, U[er_i][iiir],
-                            dE_dt * dt);
-                        std::abort();
+                        throw formatted_exception("2231242!!! % % % \n", E0,
+                            U[er_i][iiir], dE_dt * dt);
                     }
                     if (opts_problem == MARSHAK)
                     {
