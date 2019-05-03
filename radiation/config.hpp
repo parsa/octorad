@@ -5,6 +5,8 @@
 
 constexpr size_t NRF = 4;
 constexpr std::size_t NDIM = 3;
+
+constexpr std::int64_t MARSHAK = 9;
 constexpr double MARSHAK_OPAC = 1.0e+2;
 
 constexpr std::int64_t INX = 8;

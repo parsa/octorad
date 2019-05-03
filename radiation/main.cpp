@@ -109,10 +109,10 @@ bool check_case(size_t index)
     std::printf("***** gpu kernel (ported code) *****\n");
     if (!check_run_result(test_case, radiation_gpu_kernel))
     {
-        std::printf("code integrity check failed.\n");
+        std::printf("case %zd code integrity check failed.\n", index);
         return false;
     }
-    std::printf("code integrity check passed.\n");
+    std::printf("case %zd code integrity check passed.\n", index);
 
     return true;
 }
