@@ -14,11 +14,11 @@ Octo-tiger's Radiation Kernel
 
 ## Example Minimal Setup Commands
 ```
-wget -O args.7z https://www.dropbox.com/s/zo5q4y5ykl9u2n5/arg-dumps.7z?dl=1
-7z x arg-dumps.7z\?dl\=1 -odumps/ '*-78.*' -r
-module load cuda
-cmake -H. -Bcmake-build-debug -DOCTORAD_DUMP_DIR=${DUMP_DIR}
+wget -O arg-dumps.7z https://www.dropbox.com/s/zo5q4y5ykl9u2n5/arg-dumps.7z?dl=1
+7z x arg-dumps.7z -odumps/ '*-78.*' -r
+module load cuda/10.1.105
+cmake -H. -Bcmake-build-debug -DOCTORAD_DUMP_DIR=dumps
 cmake --build cmake-build-debug
-./cmake-build-debug/octorad
+./cmake-build-debug/radiation_kernel
 ```
 
