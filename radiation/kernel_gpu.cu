@@ -379,7 +379,7 @@ __device__ d_pair<double, space_vector> implicit_radiation_step(
         double((E - E0) * dtinv * rhoc2), ((F - F0) * dtinv * rhoc2 * c));
 }
 
-__global__ void radiation_impl(
+__global__ void __launch_bounds__(512, 1) radiation_impl(
     std::int64_t const opts_eos,
     std::int64_t const opts_problem,
     double const opts_dual_energy_sw1,
@@ -542,7 +542,7 @@ void radiation_gpu_kernel(
     // NOTE: too many registers (currently 168)
     // HACK: changed from dim3(1, loop_iterations, loop_iterations) so it fits
     // on the device
-    radiation_impl<<<1, dim3(1, loop_iterations, loop_iterations)>>>(
+    radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
         opts_eos,
         opts_problem,
         opts_dual_energy_sw1,
