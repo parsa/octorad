@@ -185,8 +185,6 @@ __device__ inline double ztwd_pressure(
 __device__ double ztwd_energy(
     double const physcon_A, double const physcon_B, double d)
 {
-    double A = physcon_A;
-    double B = physcon_B;
     return fmax(ztwd_enthalpy(physcon_A, physcon_B, d) * d -
             ztwd_pressure(physcon_A, physcon_B, d),
         double(0));
