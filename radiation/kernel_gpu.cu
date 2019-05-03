@@ -26,7 +26,12 @@ struct space_vector
         }
     }
 
-    __device__ double& operator[](std::size_t index)
+    __device__ double& operator[](std::size_t const index)
+    {
+        return data_[index];
+    }
+
+    __device__ double operator[](std::size_t const index) const
     {
         return data_[index];
     }
@@ -390,23 +395,23 @@ __global__ void radiation_impl(
     space_vector u1 = u0;
     double e1 = e0;
 
-    //auto const ddt = implicit_radiation_step(opts_problem, physcon_c, E1, e1,
-    //    F1, u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
-    //double const dE_dt = ddt.first;
-    //double const dFx_dt = ddt.second[0];
-    //double const dFy_dt = ddt.second[1];
-    //double const dFz_dt = ddt.second[2];
-    //
-    //// Accumulate derivatives
-    //U[er_i][iiir] += dE_dt * dt;
-    //U[fx_i][iiir] += dFx_dt * dt;
-    //U[fy_i][iiir] += dFy_dt * dt;
-    //U[fz_i][iiir] += dFz_dt * dt;
-    //
-    //egas[iiih] -= dE_dt * dt;
-    //sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
-    //sy[iiih] -= dFy_dt * dt * clightinv * clightinv;
-    //sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
+    auto const ddt = implicit_radiation_step(opts_problem, physcon_c, E1, e1,
+        F1, u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
+    double const dE_dt = ddt.first;
+    double const dFx_dt = ddt.second[0];
+    double const dFy_dt = ddt.second[1];
+    double const dFz_dt = ddt.second[2];
+
+    // Accumulate derivatives
+    Uij(U, Ui_size, er_i, iiir) += dE_dt * dt;
+    Uij(U, Ui_size, fx_i, iiir) += dFx_dt * dt;
+    Uij(U, Ui_size, fy_i, iiir) += dFy_dt * dt;
+    Uij(U, Ui_size, fz_i, iiir) += dFz_dt * dt;
+
+    egas[iiih] -= dE_dt * dt;
+    sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
+    sy[iiih] -= dFy_dt * dt * clightinv * clightinv;
+    sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
 
     // Find tau with dual energy formalism
     double e = egas[iiih];
