@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(octorad CXX CUDA)
+project(octorad CXX)
 
 ###############################################################################
 # Options
@@ -7,6 +7,13 @@ project(octorad CXX CUDA)
 option(OCTORAD_WITH_PLAYGROUND "" OFF)
 option(OCTORAD_WITH_SCRATCHPAD "" OFF)
 option(OCTORAD_WITH_VC "" OFF)
+option(OCTORAD_WITH_CUDA "" ON)
+
+if(OCTORAD_WITH_CUDA)
+    enable_language(CUDA)
+else()
+    message(STATUS "Octo-rad is being configured without CUDA")
+endif()
 
 ###############################################################################
 # Enable C++14
@@ -45,7 +52,7 @@ endif()
 ###############################################################################
 # Testpad
 ###############################################################################
-if(OCTORAD_WITH_SCRATCHPAD)
+if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_SCRATCHPAD)
     add_executable(scratchpad-01 scratchpad/scratchpad-01.cu)
     set_property(TARGET scratchpad-01
         PROPERTY FOLDER "Scratchpad")
@@ -54,7 +61,7 @@ endif()
 ###############################################################################
 # Playground
 ###############################################################################
-if(OCTORAD_WITH_PLAYGROUND)
+if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_PLAYGROUND)
     add_executable(01-heat-conduction playground/01-heat-conduction.cu playground/cuda-gpuinfo.h)
     add_executable(01-heat-conduction-solution playground/01-heat-conduction-solution.cu)
     set_property(TARGET 01-heat-conduction 01-heat-conduction-solution

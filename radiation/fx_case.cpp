@@ -7,30 +7,52 @@
 #include <fstream>
 #include <ios>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
-void abort_on_pos_mismatch(std::istream& is)
+struct throw_on_pos_mismatch
 {
-    std::streampos orig_pos{};
-    std::streampos actual_pos = is.tellg();
-    is.read(reinterpret_cast<char*>(&orig_pos), sizeof(std::streampos));
-
-    if (actual_pos!= orig_pos)
+    void operator()(std::istream& is)
     {
-        throw formatted_exception(
-            "error: stream positions do not match. actual: %, original: %",
-            actual_pos,
-            orig_pos);
+        std::streampos orig_pos{};
+        std::streampos actual_pos = is.tellg();
+        is.read(reinterpret_cast<char*>(&orig_pos), sizeof(std::streampos));
+
+        if (actual_pos != orig_pos)
+        {
+            throw formatted_exception(
+                "error: stream positions do not match. actual: %, original: %",
+                actual_pos,
+                orig_pos);
+        }
+        //std::printf("matched stream positions: %zd\n",
+        //    static_cast<std::size_t>(actual_pos));
     }
-    //std::printf("matched stream positions: %zd\n",
-    //    static_cast<std::size_t>(actual_pos));
+};
+
+struct ignore_streampos
+{
+    void operator()(std::istream& is)
+    {
+        is.ignore(24);
+    }
+};
+
+void handle_streampos(std::istream& is)
+{
+    // HACK: I did not consider streampos having different sizes on win, linux,
+    // and mac when creating dump files
+    using streampos_handler_t = std::conditional<sizeof(std::streampos) == 24,
+        throw_on_pos_mismatch,
+        ignore_streampos>::type;
+    streampos_handler_t{}(is);
 }
 
 std::vector<double> load_v(std::istream& is, std::string const var_name)
 {
-    abort_on_pos_mismatch(is);
+    handle_streampos(is);
 
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
@@ -45,7 +67,7 @@ std::vector<double> load_v(std::istream& is, std::string const var_name)
 
 std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const var_name)
 {
-    abort_on_pos_mismatch(is);
+    handle_streampos(is);
 
     std::size_t size{};
     is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
@@ -69,7 +91,7 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const 
 
 std::int64_t load_i(std::istream& is, std::string const var_name)
 {
-    abort_on_pos_mismatch(is);
+    handle_streampos(is);
 
     std::int64_t i{};
     is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
@@ -81,7 +103,7 @@ std::int64_t load_i(std::istream& is, std::string const var_name)
 
 double load_d(std::istream& is, std::string const var_name)
 {
-    abort_on_pos_mismatch(is);
+    handle_streampos(is);
 
     double d{};
     is.read(reinterpret_cast<char*>(&d), sizeof(double));

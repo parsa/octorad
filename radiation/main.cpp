@@ -1,6 +1,8 @@
 #include "fx_case.hpp"
 #include "kernel_cpu.hpp"
+#if OCTORAD_HAVE_CUDA
 #include "kernel_gpu.hpp"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -14,8 +16,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-
-int const N = 1 << 20;
 
 // NOTE: this comparison is too loose.
 // possible reference for improvement: https://stackoverflow.com/q/17333
@@ -106,6 +106,7 @@ bool check_case(size_t index)
     }
     std::printf("case %zd code integrity check passed.\n", index);
 
+#if OCTORAD_HAVE_CUDA
     std::printf("***** gpu kernel (ported code) *****\n");
     if (!check_run_result(test_case, radiation_gpu_kernel))
     {
@@ -113,6 +114,7 @@ bool check_case(size_t index)
         return false;
     }
     std::printf("case %zd code integrity check passed.\n", index);
+#endif
 
     return true;
 }
