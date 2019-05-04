@@ -3,6 +3,7 @@
 #if OCTORAD_HAVE_CUDA
 #include "kernel_gpu.hpp"
 #endif
+#include "util.hpp"
 
 #include <algorithm>
 #include <array>
@@ -135,7 +136,7 @@ int main()
     }
     catch (std::exception const& e)
     {
-        std::printf("exception thrown: %s\n", e.what());
+        std::printf("exception caught: %s\n", e.what());
         //return 1;
     }
 

@@ -8,7 +8,7 @@ template <typename... Ts>
 std::string tprintf(char const* format, Ts... vs);
 
 template <typename E = std::runtime_error, typename... Ts>
-inline std::exception formatted_exception(Ts... vs)
+inline E formatted_exception(Ts... vs)
 {
     auto r = tprintf(std::forward<Ts>(vs)...);
     return E{r};

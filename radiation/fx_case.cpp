@@ -80,7 +80,7 @@ std::array<std::vector<double>, NRF> load_a(std::istream& is, std::string const 
     std::array<std::vector<double>, NRF> a{};
     for (auto& e : a)
     {
-        std::string var_name_i = var_name + "[size_t]";
+        std::string const var_name_i = var_name + "[size_t]";
         e = load_v(is, var_name_i);
     }
 
@@ -115,7 +115,7 @@ double load_d(std::istream& is, std::string const var_name)
 
 fx_args load_case_args(std::size_t index)
 {
-    std::string args_fn =
+    std::string const args_fn =
         std::string{basepath} + std::to_string(index) + std::string{".args"};
     std::ifstream is{args_fn, std::ios::binary};
 
@@ -168,7 +168,7 @@ fx_args load_case_args(std::size_t index)
 
 fx_outs load_case_outs(std::size_t index)
 {
-    std::string outs_fn =
+    std::string const outs_fn =
         std::string{basepath} + std::to_string(index) + std::string{".outs"};
     std::ifstream is{outs_fn, std::ios::binary};
 

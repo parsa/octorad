@@ -34,7 +34,6 @@ add_executable(radiation_kernel_tester
     main.cpp
     config.hpp
     util.hpp
-    util.cpp
     fx_case.hpp
     fx_case.cpp
     kernel_cpu.hpp
