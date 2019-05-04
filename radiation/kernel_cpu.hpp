@@ -3,6 +3,7 @@
 #include "config.hpp"
 
 #include <array>
+#include <cstdint>
 #include <vector>
 
 void radiation_cpu_kernel(std::int64_t const opts_eos,
