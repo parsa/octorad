@@ -178,11 +178,11 @@ fx_outs load_case_outs(std::size_t index)
     }
 
     fx_outs outs;
-    outs.sx = std::move(load_v(is, "sx"));
-    outs.sy = std::move(load_v(is, "sy"));
-    outs.sz = std::move(load_v(is, "sz"));
-    outs.egas = std::move(load_v(is, "egas"));
-    outs.U = std::move(load_a(is, "U"));
+    outs.sx = load_v(is, "sx");
+    outs.sy = load_v(is, "sy");
+    outs.sz = load_v(is, "sz");
+    outs.egas = load_v(is, "egas");
+    outs.U = load_a(is, "U");
 
     if (is.eof())
     {

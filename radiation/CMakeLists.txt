@@ -55,6 +55,7 @@ if(OCTORAD_WITH_CUDA)
     # cuda enabled macro
     target_compile_definitions(radiation_kernel_tester PRIVATE
         OCTORAD_HAVE_CUDA)
+    set_property(TARGET radiation_kernel PROPERTY FOLDER "Octo-tiger")
 endif()
 # Vc integration
 if(OCTORAD_WITH_VC)
@@ -62,5 +63,5 @@ if(OCTORAD_WITH_VC)
 endif()
 
 # IDE settings
-set_property(TARGET radiation_kernel radiation_kernel_tester
-    PROPERTY FOLDER "Octo-tiger")
+set_property(TARGET radiation_kernel_tester PROPERTY FOLDER "Octo-tiger")
+
