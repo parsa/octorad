@@ -99,7 +99,7 @@ add_subdirectory(radiation)
 ###############################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY
-    VS_STARTUP_PROJECT radiation_kernel_tester)
+    VS_STARTUP_PROJECT fidelity_test)
 
 ###############################################################################
 # Tests

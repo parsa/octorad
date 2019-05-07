@@ -134,15 +134,15 @@ int main()
 {
     try
     {
-        check_case(78);
-        //constexpr std::size_t case_count = 13140;
-        //for (std::size_t i = 0 ; i < case_count; ++i)
-        //{
-        //    if (!check_case(i))
-        //    {
-        //        return 1;
-        //    }
-        //}
+        //check_case(78);
+        constexpr std::size_t case_count = 13140;
+        for (std::size_t i = 0 ; i < case_count / 100; ++i)
+        {
+            if (!check_case(i))
+            {
+                return 1;
+            }
+        }
     }
     catch (std::exception const& e)
     {
