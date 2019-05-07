@@ -1,6 +1,6 @@
 #include "config.hpp"
-#include "kernel_cpu.hpp"
-#include "util.hpp"
+#include "kernels/kernel_cpu.hpp"
+#include "utils/util.hpp"
 
 #include <algorithm>
 #include <array>

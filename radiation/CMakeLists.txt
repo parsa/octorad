@@ -12,6 +12,8 @@ add_library(global_config INTERFACE)
 if(MSVC)
     target_compile_definitions(global_config INTERFACE
         _USE_MATH_DEFINES)
+    target_include_directories(global_config INTERFACE
+        ${PROJECT_SOURCE_DIR}/radiation)
 endif()
 # Vc integration
 if(OCTORAD_WITH_VC)
@@ -24,8 +26,8 @@ if(OCTORAD_WITH_CUDA)
     ###########################################################################
     add_library(kernel_gpu
         config.hpp
-        kernel_gpu.hpp
-        kernel_gpu.cu
+        kernels/kernel_gpu.hpp
+        kernels/kernel_gpu.cu
     )
     target_link_libraries(kernel_gpu PRIVATE global_config)
     #target_compile_features(kernel_gpu PUBLIC cxx_std_14)
@@ -39,44 +41,45 @@ if(OCTORAD_WITH_CUDA)
 endif()
 add_library(kernel_cpu
     config.hpp
-    kernel_cpu.hpp
-    kernel_cpu.cpp
+    kernels/kernel_cpu.hpp
+    kernels/kernel_cpu.cpp
 )
 target_link_libraries(kernel_cpu PRIVATE global_config)
 
 add_library(kernel_v2
     config.hpp
-    kernel_v2.hpp
-    kernel_v2.cpp
+    kernels/kernel_v2.hpp
+    kernels/kernel_v2.cpp
 )
 target_link_libraries(kernel_v2 PRIVATE global_config)
-
 set_property(TARGET kernel_cpu kernel_v2 PROPERTY FOLDER "Octo-tiger/Kernels")
 
 ###############################################################################
 # utility libraries
 ###############################################################################
 add_library(case_loader
-    util.hpp
-    fx_case.hpp
-    fx_case.cpp
-    fx_compare.hpp
-    fx_compare.cpp
+    utils/util.hpp
+    utils/fx_case.hpp
+    utils/fx_case.cpp
+    utils/fx_compare.hpp
+    utils/fx_compare.cpp
 )
 # dump folder macro
 target_compile_definitions(case_loader PRIVATE
     OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
+target_link_libraries(case_loader PRIVATE global_config)
+set_property(TARGET case_loader PROPERTY FOLDER "Octo-tiger/Helpers")
 
 ###############################################################################
 # kernel fidelity test application
 ###############################################################################
 add_executable(fidelity_test
-    fidelity_test.cpp
+    tests/fidelity_test.cpp
     config.hpp
-    util.hpp
-    kernel_cpu.hpp
-    kernel_v2.hpp
-    kernel_gpu.hpp
+    utils/util.hpp
+    kernels/kernel_cpu.hpp
+    kernels/kernel_v2.hpp
+    kernels/kernel_gpu.hpp
 )
 if(OCTORAD_WITH_CUDA)
     # link with the kernel
@@ -85,19 +88,19 @@ if(OCTORAD_WITH_CUDA)
     target_compile_definitions(fidelity_test PRIVATE
         OCTORAD_HAVE_CUDA)
 endif()
-target_link_libraries(fidelity_test PRIVATE case_loader kernel_cpu kernel_v2)
+target_link_libraries(fidelity_test PRIVATE global_config case_loader kernel_cpu kernel_v2)
 
 ###############################################################################
 # kernel profile application
 ###############################################################################
 add_executable(profile_test
-    profile_test.cpp
+    tests/profile_test.cpp
     config.hpp
-    util.hpp
-    scoped_timer.hpp
-    kernel_cpu.hpp
-    kernel_v2.hpp
-    kernel_gpu.hpp
+    utils/util.hpp
+    utils/scoped_timer.hpp
+    kernels/kernel_cpu.hpp
+    kernels/kernel_v2.hpp
+    kernels/kernel_gpu.hpp
 )
 if(OCTORAD_WITH_CUDA)
     # link with the kernel
@@ -106,10 +109,10 @@ if(OCTORAD_WITH_CUDA)
     target_compile_definitions(profile_test PRIVATE
         OCTORAD_HAVE_CUDA)
 endif()
-target_link_libraries(profile_test PRIVATE case_loader kernel_cpu kernel_v2)
+target_link_libraries(profile_test PRIVATE global_config case_loader kernel_cpu kernel_v2)
 
 ###############################################################################
 # IDE settings
 ###############################################################################
-set_property(TARGET fidelity_test profile_test case_loader PROPERTY FOLDER "Octo-tiger")
+set_property(TARGET fidelity_test profile_test PROPERTY FOLDER "Octo-tiger/Tests")
 

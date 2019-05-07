@@ -1,6 +1,6 @@
 #include "config.hpp"
-#include "fx_case.hpp"
-#include "util.hpp"
+#include "utils/fx_case.hpp"
+#include "utils/util.hpp"
 
 #include <array>
 #include <cstdint>

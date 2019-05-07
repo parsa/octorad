@@ -1,5 +1,5 @@
 #include "config.hpp"
-#include "kernel_gpu.hpp"
+#include "kernels/kernel_gpu.hpp"
 
 #include <array>
 #include <cassert>
