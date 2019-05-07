@@ -4,11 +4,16 @@ project(octorad CXX)
 ###############################################################################
 # Options
 ###############################################################################
-option(OCTORAD_WITH_PLAYGROUND "" OFF)
-option(OCTORAD_WITH_SCRATCHPAD "" OFF)
-option(OCTORAD_WITH_VC "" OFF)
-option(OCTORAD_WITH_CUDA "" ON)
+option(OCTORAD_WITH_PLAYGROUND "Enable old toy kernels unrelated to Octo-tiger (default: OFF)" OFF)
+option(OCTORAD_WITH_SCRATCHPAD "Enable the scratchpad project(s) (default: OFF)" OFF)
+option(OCTORAD_WITH_VC "Enable Vc model, requires Vc CMake module to be visible (default: OFF)" OFF)
+option(OCTORAD_WITH_CUDA "Enable GPU kernels and testing codes (default: ON)" ON)
 
+set(OCTORAD_DUMP_DIR "" CACHE PATH "Path to directory containing `*.args` and `*.outs` dump files")
+
+###############################################################################
+# CUDA Project
+###############################################################################
 if(OCTORAD_WITH_CUDA)
     enable_language(CUDA)
 else()
