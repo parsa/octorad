@@ -21,31 +21,31 @@
 #include <vector>
 
 template <typename K>
-bool check_run_result(fx_case test_case, K kernel)
+bool check_run_result(octotiger::fx_case test_case, K kernel)
 {
-    fx_args& a = test_case.args;
+    octotiger::fx_args& a = test_case.args;
     kernel(a.opts_eos, a.opts_problem, a.opts_dual_energy_sw1,
         a.opts_dual_energy_sw2, a.physcon_A, a.physcon_B, a.physcon_c, a.er_i,
         a.fx_i, a.fy_i, a.fz_i, a.d, a.rho, a.sx, a.sy, a.sz, a.egas, a.tau,
         a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt, a.clightinv);
 
     bool result =
-        are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-        are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-        are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-        are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-        are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+        octotiger::are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
+        octotiger::are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
+        octotiger::are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
+        octotiger::are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
+        octotiger::are_ranges_same(test_case.args.U, test_case.outs.U, "U");
     return result;
 }
 
-bool check_case(size_t index)
+bool check_case(std::size_t index)
 {
     std::printf("***** load case %zd *****\n", index);
-    fx_case const test_case = import_case(index);
+    octotiger::fx_case const test_case = octotiger::import_case(index);
 
     std::printf("***** cpu kernel (reference) *****\n");
 
-    if (!check_run_result(test_case, radiation_cpu_kernel))
+    if (!check_run_result(test_case, octotiger::radiation_cpu_kernel))
     {
         std::printf("case %zd code integrity check failed.\n", index);
         return false;
@@ -54,7 +54,7 @@ bool check_case(size_t index)
 
     std::printf("***** cpu kernel (v2) *****\n");
 
-    if (!check_run_result(test_case, radiation_v2_kernel))
+    if (!check_run_result(test_case, octotiger::radiation_v2_kernel))
     {
         std::printf("case %zd code integrity check failed.\n", index);
         return false;
@@ -63,7 +63,7 @@ bool check_case(size_t index)
 
 #if OCTORAD_HAVE_CUDA
     std::printf("***** gpu kernel (ported code) *****\n");
-    if (!check_run_result(test_case, radiation_gpu_kernel))
+    if (!check_run_result(test_case, octotiger::radiation_gpu_kernel))
     {
         std::printf("case %zd code integrity check failed.\n", index);
         return false;

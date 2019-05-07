@@ -499,89 +499,91 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     }
 }
 
-void radiation_gpu_kernel(
-    std::int64_t const opts_eos,
-    std::int64_t const opts_problem,
-    double const opts_dual_energy_sw1,
-    double const opts_dual_energy_sw2,
-    double const physcon_A,
-    double const physcon_B,
-    double const physcon_c,
-    std::int64_t const er_i,
-    std::int64_t const fx_i,
-    std::int64_t const fy_i,
-    std::int64_t const fz_i,
-    std::int64_t const d,
-    std::vector<double> const& rho,
-    std::vector<double>& sx,
-    std::vector<double>& sy,
-    std::vector<double>& sz,
-    std::vector<double>& egas,
-    std::vector<double>& tau,
-    double const fgamma,
-    std::array<std::vector<double>, NRF> U,
-    std::vector<double> const mmw,
-    std::vector<double> const X_spc,
-    std::vector<double> const Z_spc,
-    double const dt,
-    double const clightinv)
-{
-    double* d_rho = alloc_copy_device(rho);
-    double* d_sx = alloc_copy_device(sx);
-    double* d_sy = alloc_copy_device(sy);
-    double* d_sz = alloc_copy_device(sz);
-    double* d_egas = alloc_copy_device(egas);
-    double* d_tau = alloc_copy_device(tau);
-    double* d_U = alloc_copy_device(U);
-    double* d_mmw = alloc_copy_device(mmw);
-    double* d_X_spc = alloc_copy_device(X_spc);
-    double* d_Z_spc = alloc_copy_device(Z_spc);
+namespace octotiger {
+    void radiation_gpu_kernel(std::int64_t const opts_eos,
+        std::int64_t const opts_problem,
+        double const opts_dual_energy_sw1,
+        double const opts_dual_energy_sw2,
+        double const physcon_A,
+        double const physcon_B,
+        double const physcon_c,
+        std::int64_t const er_i,
+        std::int64_t const fx_i,
+        std::int64_t const fy_i,
+        std::int64_t const fz_i,
+        std::int64_t const d,
+        std::vector<double> const& rho,
+        std::vector<double>& sx,
+        std::vector<double>& sy,
+        std::vector<double>& sz,
+        std::vector<double>& egas,
+        std::vector<double>& tau,
+        double const fgamma,
+        std::array<std::vector<double>, NRF>
+            U,
+        std::vector<double> const mmw,
+        std::vector<double> const X_spc,
+        std::vector<double> const Z_spc,
+        double const dt,
+        double const clightinv)
+    {
+        double* d_rho = alloc_copy_device(rho);
+        double* d_sx = alloc_copy_device(sx);
+        double* d_sy = alloc_copy_device(sy);
+        double* d_sz = alloc_copy_device(sz);
+        double* d_egas = alloc_copy_device(egas);
+        double* d_tau = alloc_copy_device(tau);
+        double* d_U = alloc_copy_device(U);
+        double* d_mmw = alloc_copy_device(mmw);
+        double* d_X_spc = alloc_copy_device(X_spc);
+        double* d_Z_spc = alloc_copy_device(Z_spc);
 
-    //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
-    // NOTE: too many registers (currently 168)
-    radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
-        opts_eos,
-        opts_problem,
-        opts_dual_energy_sw1,
-        opts_dual_energy_sw2,
-        physcon_A,
-        physcon_B,
-        physcon_c,
-        er_i,
-        fx_i,
-        fy_i,
-        fz_i,
-        d,
-        d_rho, rho.size(),
-        d_sx, sx.size(),
-        d_sy, sy.size(),
-        d_sz, sz.size(),
-        d_egas, egas.size(),
-        d_tau, tau.size(),
-        fgamma,
-        d_U, U[0].size(),
-        d_mmw, mmw.size(),
-        d_X_spc, X_spc.size(),
-        d_Z_spc, Z_spc.size(),
-        dt,
-        clightinv
-        );
-    throw_if_cuda_error();
+        //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
+        // NOTE: too many registers (currently 168)
+        radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
+            opts_eos,
+            opts_problem,
+            opts_dual_energy_sw1,
+            opts_dual_energy_sw2,
+            physcon_A,
+            physcon_B,
+            physcon_c,
+            er_i,
+            fx_i,
+            fy_i,
+            fz_i,
+            d,
+            d_rho, rho.size(),
+            d_sx, sx.size(),
+            d_sy, sy.size(),
+            d_sz, sz.size(),
+            d_egas, egas.size(),
+            d_tau, tau.size(),
+            fgamma,
+            d_U, U[0].size(),
+            d_mmw, mmw.size(),
+            d_X_spc, X_spc.size(),
+            d_Z_spc, Z_spc.size(),
+            dt,
+            clightinv
+            );
+        throw_if_cuda_error();
 
-    copy_from_device(d_sx, sx);
-    copy_from_device(d_sy, sy);
-    copy_from_device(d_sz, sz);
-    copy_from_device(d_egas, egas);
-    copy_from_device(d_U, U);
+        copy_from_device(d_sx, sx);
+        copy_from_device(d_sy, sy);
+        copy_from_device(d_sz, sz);
+        copy_from_device(d_egas, egas);
+        copy_from_device(d_U, U);
 
-    free_device(d_rho);
-    free_device(d_sx);
-    free_device(d_sy);
-    free_device(d_sz);
-    free_device(d_egas);
-    free_device(d_tau);
-    free_device(d_U);
-    free_device(d_mmw);
-    free_device(d_X_spc);
-    free_device(d_Z_spc);
+        free_device(d_rho);
+        free_device(d_sx);
+        free_device(d_sy);
+        free_device(d_sz);
+        free_device(d_egas);
+        free_device(d_tau);
+        free_device(d_U);
+        free_device(d_mmw);
+        free_device(d_X_spc);
+        free_device(d_Z_spc);
+    }
 }

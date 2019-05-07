@@ -23,36 +23,36 @@
 #include <vector>
 
 template <typename K>
-void run_case_on_kernel(fx_case test_case, K kernel)
+void run_case_on_kernel(octotiger::fx_case test_case, K kernel)
 {
-    fx_args& a = test_case.args;
+    octotiger::fx_args& a = test_case.args;
     kernel(a.opts_eos, a.opts_problem, a.opts_dual_energy_sw1,
         a.opts_dual_energy_sw2, a.physcon_A, a.physcon_B, a.physcon_c, a.er_i,
         a.fx_i, a.fy_i, a.fz_i, a.d, a.rho, a.sx, a.sy, a.sz, a.egas, a.tau,
         a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt, a.clightinv);
 
     bool const success =
-        are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-        are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-        are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-        are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-        are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+        octotiger::are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
+        octotiger::are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
+        octotiger::are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
+        octotiger::are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
+        octotiger::are_ranges_same(test_case.args.U, test_case.outs.U, "U");
     if (!success)
     {
-        throw formatted_exception("case % code integrity check failed", test_case.index);
+        throw octotiger::formatted_exception("case % code integrity check failed", test_case.index);
     }
 }
 
-void run_case(size_t index)
+void run_case(std::size_t index)
 {
     std::printf("***** load case %zd *****\n", index);
-    fx_case const test_case = import_case(index);
+    octotiger::fx_case const test_case = octotiger::import_case(index);
 
     std::printf("***** cpu kernel (reference) *****\n");
     double cpu_kernel_duration{};
     {
         scoped_timer<double>{cpu_kernel_duration};
-        run_case_on_kernel(test_case, radiation_cpu_kernel);
+        run_case_on_kernel(test_case, octotiger::radiation_cpu_kernel);
     }
     std::printf("duration: %g\n", cpu_kernel_duration);
 
@@ -60,7 +60,7 @@ void run_case(size_t index)
     double v2_kernel_duration{};
     {
         scoped_timer<double>{v2_kernel_duration};
-        run_case_on_kernel(test_case, radiation_v2_kernel);
+        run_case_on_kernel(test_case, octotiger::radiation_v2_kernel);
     }
     std::printf("duration: %g\n", v2_kernel_duration);
 
@@ -69,7 +69,7 @@ void run_case(size_t index)
     double gpu_kernel_duration{};
     {
         scoped_timer<double>{gpu_kernel_duration};
-        run_case_on_kernel(test_case, radiation_gpu_kernel);
+        run_case_on_kernel(test_case, octotiger::radiation_gpu_kernel);
     }
     std::printf("duration: %g\n", gpu_kernel_duration);
 #endif
