@@ -94,6 +94,7 @@ add_executable(profile_test
     profile_test.cpp
     config.hpp
     util.hpp
+    scoped_timer.hpp
     kernel_cpu.hpp
     kernel_v2.hpp
     kernel_gpu.hpp

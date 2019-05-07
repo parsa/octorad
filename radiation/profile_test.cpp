@@ -5,6 +5,7 @@
 #if OCTORAD_HAVE_CUDA
 #include "kernel_gpu.hpp"
 #endif
+#include "scoped_timer.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -20,25 +21,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-
-struct scoped_timer
-{
-    scoped_timer(double& r)
-      : start_timepoint(std::chrono::high_resolution_clock::now())
-      , value{r}
-    {
-    }
-    ~scoped_timer()
-    {
-        value = std::chrono::duration<double, std::ratio<1, 1000000000>>(
-            std::chrono::high_resolution_clock::now() - start_timepoint)
-                    .count();
-    }
-    double& value;
-
-private:
-    std::chrono::high_resolution_clock::time_point start_timepoint;
-};
 
 template <typename K>
 void run_case_on_kernel(fx_case test_case, K kernel)
@@ -69,7 +51,7 @@ void run_case(size_t index)
     std::printf("***** cpu kernel (reference) *****\n");
     double cpu_kernel_duration{};
     {
-        scoped_timer{cpu_kernel_duration};
+        scoped_timer<double>{cpu_kernel_duration};
         run_case_on_kernel(test_case, radiation_cpu_kernel);
     }
     std::printf("duration: %g\n", cpu_kernel_duration);
@@ -77,7 +59,7 @@ void run_case(size_t index)
     std::printf("***** cpu kernel (v2) *****\n");
     double v2_kernel_duration{};
     {
-        scoped_timer{v2_kernel_duration};
+        scoped_timer<double>{v2_kernel_duration};
         run_case_on_kernel(test_case, radiation_v2_kernel);
     }
     std::printf("duration: %g\n", v2_kernel_duration);
@@ -86,7 +68,7 @@ void run_case(size_t index)
     std::printf("***** gpu kernel (ported code) *****\n");
     double gpu_kernel_duration{};
     {
-        scoped_timer{gpu_kernel_duration};
+        scoped_timer<double>{gpu_kernel_duration};
         run_case_on_kernel(test_case, radiation_gpu_kernel);
     }
     std::printf("duration: %g\n", gpu_kernel_duration);
