@@ -85,7 +85,7 @@ int main()
     catch (std::exception const& e)
     {
         std::printf("exception caught: %s\n", e.what());
-        //return 1;
+        return 1;
     }
 
     return 0;
