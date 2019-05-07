@@ -190,7 +190,7 @@ __device__ double ztwd_energy(
         double(0));
 }
 
-__device__ inline double& Uij(
+__device__ inline double& e_ij(
     double* U, std::size_t Ui_size, std::size_t i, std::size_t j)
 {
     return U[i * Ui_size + j];
@@ -217,8 +217,8 @@ T* alloc_copy_device(std::vector<T> const& v)
 {
     T* device_ptr;
     cudaMalloc((void**) &device_ptr, v.size() * sizeof(T));
-    throw_if_cuda_error(
-        cudaMemcpy(device_ptr, &v[0], v.size(), cudaMemcpyHostToDevice));
+    throw_if_cuda_error(cudaMemcpy(
+        device_ptr, &v[0], v.size() * sizeof(T), cudaMemcpyHostToDevice));
     return device_ptr;
 }
 
@@ -226,11 +226,11 @@ template <typename T, std::size_t N>
 T* alloc_copy_device(std::array<std::vector<T>, N> const& a)
 {
     T* device_ptr;
-    cudaMalloc((void**) &device_ptr, NRF * a[0].size() * sizeof(T));
-    for (std::size_t i = 0; i < NRF; ++i)
+    cudaMalloc((void**) &device_ptr, N * a[0].size() * sizeof(T));
+    for (std::size_t i = 0; i < N; ++i)
     {
-        throw_if_cuda_error(cudaMemcpy(device_ptr + i * a.size(), &a[i][0],
-            a[i].size(), cudaMemcpyHostToDevice));
+        throw_if_cuda_error(cudaMemcpy(device_ptr + i * a[0].size(), &a[i][0],
+            a[i].size() * sizeof(T), cudaMemcpyHostToDevice));
     }
     return device_ptr;
 }
@@ -300,6 +300,7 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F c
             f_min = f_mid;
             f_mid = test(de_mid);
         }
+        //std::printf("iteration: %d, error: %g\n", i, error);
     }
     // Error is not smaller that error tolerance after performed iterations. Abort.
     std::printf("implicit radiation solver failed to converge\n");
@@ -334,7 +335,7 @@ __device__ d_pair<double, space_vector> implicit_radiation_step(
     auto eg_t = e0 + 0.5 * (u0[0] * u0[0] + u0[1] * u0[1] + u0[2] * u0[2]);
     auto F = F0;
     auto u = u0;
-    double ei;
+    double ei{};
     auto const eg_t0 = eg_t;
 
     double u2_0 = 0.0;
@@ -429,12 +430,12 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     {
         e0 = pow(tau[iiih], fgamma);
     }
-    double E0 = Uij(U, Ui_size, er_i, iiir);
+    double E0 = e_ij(U, Ui_size, er_i, iiir);
     space_vector F0;
     space_vector u0;
-    F0[0] = Uij(U, Ui_size, fx_i, iiir);
-    F0[1] = Uij(U, Ui_size, fy_i, iiir);
-    F0[2] = Uij(U, Ui_size, fz_i, iiir);
+    F0[0] = e_ij(U, Ui_size, fx_i, iiir);
+    F0[1] = e_ij(U, Ui_size, fy_i, iiir);
+    F0[2] = e_ij(U, Ui_size, fz_i, iiir);
     u0[0] = vx;
     u0[1] = vy;
     u0[2] = vz;
@@ -451,10 +452,10 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     double const dFz_dt = ddt.second[2];
 
     // Accumulate derivatives
-    Uij(U, Ui_size, er_i, iiir) += dE_dt * dt;
-    Uij(U, Ui_size, fx_i, iiir) += dFx_dt * dt;
-    Uij(U, Ui_size, fy_i, iiir) += dFy_dt * dt;
-    Uij(U, Ui_size, fz_i, iiir) += dFz_dt * dt;
+    e_ij(U, Ui_size, er_i, iiir) += dE_dt * dt;
+    e_ij(U, Ui_size, fx_i, iiir) += dFx_dt * dt;
+    e_ij(U, Ui_size, fy_i, iiir) += dFy_dt * dt;
+    e_ij(U, Ui_size, fz_i, iiir) += dFz_dt * dt;
 
     egas[iiih] -= dE_dt * dt;
     sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
@@ -479,16 +480,16 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
         egas[iiih] = e;
         sx[iiih] = sy[iiih] = sz[iiih] = 0;
     }
-    if (Uij(U, Ui_size, er_i, iiir) <= 0.0)
+    if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
     {
-        std::printf("Er = %e %e %e %e\n", E0, E1, Uij(U, Ui_size, er_i, iiir), dt);
+        std::printf("Er = %e %e %e %e\n", E0, E1, e_ij(U, Ui_size, er_i, iiir), dt);
         assert(false);
     }
     e = fmax(e, 0.0);
     tau[iiih] = std::pow(e, INVERSE(fgamma));
-    if (Uij(U, Ui_size, er_i, iiir) <= 0.0)
+    if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
     {
-        std::printf("2231242!!! %e %e %e \n", E0, Uij(U, Ui_size, er_i, iiir), dE_dt * dt);
+        std::printf("2231242!!! %e %e %e \n", E0, e_ij(U, Ui_size, er_i, iiir), dE_dt * dt);
         assert(false);
     }
     if (opts_problem == MARSHAK)
@@ -538,8 +539,6 @@ void radiation_gpu_kernel(
 
     //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
     // NOTE: too many registers (currently 168)
-    // HACK: changed from dim3(1, loop_iterations, loop_iterations) so it fits
-    // on the device
     radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
         opts_eos,
         opts_problem,
@@ -560,7 +559,7 @@ void radiation_gpu_kernel(
         d_egas, egas.size(),
         d_tau, tau.size(),
         fgamma,
-        d_U, NRF * U[0].size(),
+        d_U, U[0].size(),
         d_mmw, mmw.size(),
         d_X_spc, X_spc.size(),
         d_Z_spc, Z_spc.size(),
