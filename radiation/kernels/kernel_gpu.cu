@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include "kernels/kernel_gpu.hpp"
+#include "kernels/helpers.hpp"
 
 #include <array>
 #include <cassert>
@@ -41,10 +42,10 @@ struct space_vector
     __device__ space_vector operator/(double const rhs) const
     {
         space_vector ret;
-        ret[0] = data_[0] / rhs;
-        ret[1] = data_[1] / rhs;
-        ret[2] = data_[2] / rhs;
-        ret[3] = data_[3] / rhs;
+        ret.data_[0] = data_[0] / rhs;
+        ret.data_[1] = data_[1] / rhs;
+        ret.data_[2] = data_[2] / rhs;
+        ret.data_[3] = data_[3] / rhs;
 
         return ret;
     }
@@ -52,10 +53,10 @@ struct space_vector
     __device__ space_vector operator-(space_vector const& rhs) const
     {
         space_vector ret;
-        ret[0] = data_[0] - rhs.data_[0];
-        ret[1] = data_[1] - rhs.data_[1];
-        ret[2] = data_[2] - rhs.data_[2];
-        ret[3] = data_[3] - rhs.data_[3];
+        ret.data_[0] = data_[0] - rhs.data_[0];
+        ret.data_[1] = data_[1] - rhs.data_[1];
+        ret.data_[2] = data_[2] - rhs.data_[2];
+        ret.data_[3] = data_[3] - rhs.data_[3];
 
         return ret;
     }
@@ -63,10 +64,10 @@ struct space_vector
     __device__ space_vector operator*(double const rhs) const
     {
         space_vector ret;
-        ret[0] = data_[0] * rhs;
-        ret[1] = data_[1] * rhs;
-        ret[2] = data_[2] * rhs;
-        ret[3] = data_[3] * rhs;
+        ret.data_[0] = data_[0] * rhs;
+        ret.data_[1] = data_[1] * rhs;
+        ret.data_[2] = data_[2] * rhs;
+        ret.data_[3] = data_[3] * rhs;
 
         return ret;
     }
@@ -74,6 +75,15 @@ struct space_vector
 private:
     double data_[4]{};
 };
+
+__device__ space_vector make_space_vector(double x, double y, double z)
+{
+    space_vector ret;
+    ret[0] = x;
+    ret[1] = y;
+    ret[2] = z;
+    return ret;
+}
 
 template <typename T1, typename T2>
 struct d_pair
@@ -194,68 +204,6 @@ __device__ inline double& e_ij(
     double* U, std::size_t Ui_size, std::size_t i, std::size_t j)
 {
     return U[i * Ui_size + j];
-}
-
-void throw_if_cuda_error(cudaError_t err)
-{
-    if (err != cudaSuccess)
-    {
-        std::stringstream err_ss;
-        err_ss << "cuda error: " << cudaGetErrorString(err);
-        throw std::runtime_error(err_ss.str());
-    }
-}
-
-void throw_if_cuda_error()
-{
-    cudaError_t err = cudaGetLastError();
-    throw_if_cuda_error(err);
-}
-
-template <typename T>
-T* alloc_copy_device(std::vector<T> const& v)
-{
-    T* device_ptr;
-    cudaMalloc((void**) &device_ptr, v.size() * sizeof(T));
-    throw_if_cuda_error(cudaMemcpy(
-        device_ptr, &v[0], v.size() * sizeof(T), cudaMemcpyHostToDevice));
-    return device_ptr;
-}
-
-template <typename T, std::size_t N>
-T* alloc_copy_device(std::array<std::vector<T>, N> const& a)
-{
-    T* device_ptr;
-    cudaMalloc((void**) &device_ptr, N * a[0].size() * sizeof(T));
-    for (std::size_t i = 0; i < N; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(device_ptr + i * a[0].size(), &a[i][0],
-            a[i].size() * sizeof(T), cudaMemcpyHostToDevice));
-    }
-    return device_ptr;
-}
-
-template <typename T>
-void copy_from_device(T* device_ptr, std::vector<T>& v)
-{
-    throw_if_cuda_error(cudaMemcpy(
-        &v[0], device_ptr, v.size() * sizeof(T), cudaMemcpyDeviceToHost));
-}
-
-template <typename T, std::size_t N>
-void copy_from_device(T* device_ptr, std::array<std::vector<T>, N>& a)
-{
-    for (std::size_t i = 0; i < NRF; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(&a[i][0], device_ptr + i * a[i].size(),
-            a[i].size() * sizeof(T), cudaMemcpyDeviceToHost));
-    }
-}
-
-template <typename T>
-void free_device(T const* device_ptr)
-{
-    throw_if_cuda_error(cudaFree((void*) device_ptr));
 }
 
 template <typename F>
@@ -418,10 +366,10 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     double vz = sz[iiih] * deninv;
 
     // Compute e0 from dual energy formalism
-    double e0 = egas[iiih];
-    e0 -= 0.5 * vx * vx * den;
-    e0 -= 0.5 * vy * vy * den;
-    e0 -= 0.5 * vz * vz * den;
+    double e0 = egas[iiih]
+       - 0.5 * vx * vx * den
+       - 0.5 * vy * vy * den
+       - 0.5 * vz * vz * den;
     if (opts_eos == eos_wd)
     {
         e0 -= ztwd_energy(physcon_A, physcon_B, den);
@@ -431,14 +379,11 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
         e0 = pow(tau[iiih], fgamma);
     }
     double E0 = e_ij(U, Ui_size, er_i, iiir);
-    space_vector F0;
-    space_vector u0;
-    F0[0] = e_ij(U, Ui_size, fx_i, iiir);
-    F0[1] = e_ij(U, Ui_size, fy_i, iiir);
-    F0[2] = e_ij(U, Ui_size, fz_i, iiir);
-    u0[0] = vx;
-    u0[1] = vy;
-    u0[2] = vz;
+    space_vector F0 = make_space_vector(
+        e_ij(U, Ui_size, fx_i, iiir),
+        e_ij(U, Ui_size, fy_i, iiir),
+        e_ij(U, Ui_size, fz_i, iiir));
+    space_vector u0 = make_space_vector(vx, vy, vz);
     double E1 = E0;
     space_vector F1 = F0;
     space_vector u1 = u0;
@@ -463,10 +408,10 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
 
     // Find tau with dual energy formalism
-    double e = egas[iiih];
-    e -= 0.5 * sx[iiih] * sx[iiih] * deninv;
-    e -= 0.5 * sy[iiih] * sy[iiih] * deninv;
-    e -= 0.5 * sz[iiih] * sz[iiih] * deninv;
+    double e = egas[iiih]
+      - 0.5 * sx[iiih] * sx[iiih] * deninv
+      - 0.5 * sy[iiih] * sy[iiih] * deninv
+      - 0.5 * sz[iiih] * sz[iiih] * deninv;
     if (opts_eos == eos_wd)
     {
         e -= ztwd_energy(physcon_A, physcon_B, den);

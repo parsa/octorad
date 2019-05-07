@@ -26,6 +26,7 @@ if(OCTORAD_WITH_CUDA)
     ###########################################################################
     add_library(kernel_gpu
         config.hpp
+        kernels/helpers.hpp
         kernels/kernel_gpu.hpp
         kernels/kernel_gpu.cu
     )
