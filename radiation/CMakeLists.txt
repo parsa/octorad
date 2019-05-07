@@ -38,6 +38,8 @@ add_executable(radiation_kernel_tester
     fx_case.cpp
     kernel_cpu.hpp
     kernel_cpu.cpp
+    kernel_v2.hpp
+    kernel_v2.cpp
     kernel_gpu.hpp
 )
 # MSVC-specific <math.h> macro

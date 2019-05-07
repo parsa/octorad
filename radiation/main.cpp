@@ -1,5 +1,6 @@
 #include "fx_case.hpp"
 #include "kernel_cpu.hpp"
+#include "kernel_v2.hpp"
 #if OCTORAD_HAVE_CUDA
 #include "kernel_gpu.hpp"
 #endif
@@ -101,6 +102,15 @@ bool check_case(size_t index)
     std::printf("***** cpu kernel (reference) *****\n");
 
     if (!check_run_result(test_case, radiation_cpu_kernel))
+    {
+        std::printf("case %zd code integrity check failed.\n", index);
+        return false;
+    }
+    std::printf("case %zd code integrity check passed.\n", index);
+
+    std::printf("***** cpu kernel (v2) *****\n");
+
+    if (!check_run_result(test_case, radiation_v2_kernel))
     {
         std::printf("case %zd code integrity check failed.\n", index);
         return false;
