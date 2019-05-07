@@ -13,6 +13,10 @@ if(MSVC)
     target_compile_definitions(global_config INTERFACE
         _USE_MATH_DEFINES)
 endif()
+# Vc integration
+if(OCTORAD_WITH_VC)
+    target_link_libraries(global_config INTERFACE octorad_vc)
+endif()
 
 if(OCTORAD_WITH_CUDA)
     ###########################################################################
@@ -56,13 +60,15 @@ add_library(case_loader
     util.hpp
     fx_case.hpp
     fx_case.cpp
+    fx_compare.hpp
+    fx_compare.cpp
 )
 # dump folder macro
 target_compile_definitions(case_loader PRIVATE
     OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
 
 ###############################################################################
-# test application
+# kernel fidelity test application
 ###############################################################################
 add_executable(fidelity_test
     fidelity_test.cpp
@@ -80,11 +86,29 @@ if(OCTORAD_WITH_CUDA)
         OCTORAD_HAVE_CUDA)
 endif()
 target_link_libraries(fidelity_test PRIVATE case_loader kernel_cpu kernel_v2)
-# Vc integration
-if(OCTORAD_WITH_VC)
-    target_link_libraries(fidelity_test PRIVATE octorad_vc)
-endif()
 
+###############################################################################
+# kernel profile application
+###############################################################################
+add_executable(profile_test
+    profile_test.cpp
+    config.hpp
+    util.hpp
+    kernel_cpu.hpp
+    kernel_v2.hpp
+    kernel_gpu.hpp
+)
+if(OCTORAD_WITH_CUDA)
+    # link with the kernel
+    target_link_libraries(profile_test PRIVATE kernel_gpu)
+    # cuda enabled macro
+    target_compile_definitions(profile_test PRIVATE
+        OCTORAD_HAVE_CUDA)
+endif()
+target_link_libraries(profile_test PRIVATE case_loader kernel_cpu kernel_v2)
+
+###############################################################################
 # IDE settings
-set_property(TARGET fidelity_test case_loader PROPERTY FOLDER "Octo-tiger")
+###############################################################################
+set_property(TARGET fidelity_test profile_test case_loader PROPERTY FOLDER "Octo-tiger")
 
