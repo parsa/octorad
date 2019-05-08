@@ -16,8 +16,7 @@ struct scoped_timer
             std::chrono::high_resolution_clock::now() - start_timepoint)
                     .count();
     }
-    T& value;
-
 private:
     std::chrono::high_resolution_clock::time_point start_timepoint;
+    T& value;
 };

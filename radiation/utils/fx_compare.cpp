@@ -2,6 +2,8 @@
 #include "utils/fx_compare.hpp"
 
 #include <array>
+#include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 

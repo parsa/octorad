@@ -12,9 +12,9 @@ add_library(global_config INTERFACE)
 if(MSVC)
     target_compile_definitions(global_config INTERFACE
         _USE_MATH_DEFINES)
-    target_include_directories(global_config INTERFACE
-        ${PROJECT_SOURCE_DIR}/radiation)
 endif()
+target_include_directories(global_config INTERFACE
+    ${PROJECT_SOURCE_DIR}/radiation)
 # Vc integration
 if(OCTORAD_WITH_VC)
     target_link_libraries(global_config INTERFACE octorad_vc)
@@ -68,7 +68,7 @@ add_library(case_loader
 # dump folder macro
 target_compile_definitions(case_loader PRIVATE
     OCTORAD_DUMP_DIR="${OCTORAD_DUMP_DIR}")
-target_link_libraries(case_loader PRIVATE global_config)
+target_link_libraries(case_loader PUBLIC global_config)
 set_property(TARGET case_loader PROPERTY FOLDER "Octo-tiger/Helpers")
 
 ###############################################################################
@@ -89,7 +89,7 @@ if(OCTORAD_WITH_CUDA)
     target_compile_definitions(fidelity_test PRIVATE
         OCTORAD_HAVE_CUDA)
 endif()
-target_link_libraries(fidelity_test PRIVATE global_config case_loader kernel_cpu kernel_v2)
+target_link_libraries(fidelity_test PRIVATE case_loader kernel_cpu kernel_v2)
 
 ###############################################################################
 # kernel profile application
@@ -110,7 +110,7 @@ if(OCTORAD_WITH_CUDA)
     target_compile_definitions(profile_test PRIVATE
         OCTORAD_HAVE_CUDA)
 endif()
-target_link_libraries(profile_test PRIVATE global_config case_loader kernel_cpu kernel_v2)
+target_link_libraries(profile_test PRIVATE case_loader kernel_cpu kernel_v2)
 
 ###############################################################################
 # IDE settings
