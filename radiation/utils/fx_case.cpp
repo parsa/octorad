@@ -50,7 +50,7 @@ namespace octotiger {
         streampos_handler_t{}(is);
     }
 
-    std::vector<double> load_v(std::istream& is, std::string const var_name)
+    std::vector<double> load_v(std::istream& is)
     {
         handle_streampos(is);
 
@@ -63,8 +63,7 @@ namespace octotiger {
         return v;
     }
 
-    std::array<std::vector<double>, NRF> load_a(std::istream& is,
-        std::string const var_name)
+    std::array<std::vector<double>, NRF> load_a(std::istream& is)
     {
         handle_streampos(is);
 
@@ -79,14 +78,13 @@ namespace octotiger {
         std::array<std::vector<double>, NRF> a{};
         for (auto& e : a)
         {
-            std::string const var_name_i = var_name + "[size_t]";
-            e = load_v(is, var_name_i);
+            e = load_v(is);
         }
 
         return a;
     }
 
-    std::int64_t load_i(std::istream& is, std::string const var_name)
+    std::int64_t load_i(std::istream& is)
     {
         handle_streampos(is);
 
@@ -96,7 +94,7 @@ namespace octotiger {
         return i;
     }
 
-    double load_d(std::istream& is, std::string const var_name)
+    double load_d(std::istream& is)
     {
         handle_streampos(is);
 
@@ -119,31 +117,31 @@ namespace octotiger {
         }
 
         fx_args args;
-        args.opts_eos = load_i(is, "opts_eos");
-        args.opts_problem = load_i(is, "opts_problem");
-        args.opts_dual_energy_sw1 = load_d(is, "opts_dual_energy_sw1");
-        args.opts_dual_energy_sw2 = load_d(is, "opts_dual_energy_sw2");
-        args.physcon_A = load_d(is, "physcon_A");
-        args.physcon_B = load_d(is, "physcon_B");
-        args.physcon_c = load_d(is, "physcon_c");
-        args.er_i = load_i(is, "er_i");
-        args.fx_i = load_i(is, "fx_i");
-        args.fy_i = load_i(is, "fy_i");
-        args.fz_i = load_i(is, "fz_i");
-        args.d = load_i(is, "d");
-        args.rho = load_v(is, "rho");
-        args.sx = load_v(is, "sx");
-        args.sy = load_v(is, "sy");
-        args.sz = load_v(is, "sz");
-        args.egas = load_v(is, "egas");
-        args.tau = load_v(is, "tau");
-        args.fgamma = load_d(is, "fgamma");
-        args.U = load_a(is, "U");
-        args.mmw = load_v(is, "mmw");
-        args.X_spc = load_v(is, "X_spc");
-        args.Z_spc = load_v(is, "Z_spc");
-        args.dt = load_d(is, "dt");
-        args.clightinv = load_d(is, "clightinv");
+        args.opts_eos = load_i(is);
+        args.opts_problem = load_i(is);
+        args.opts_dual_energy_sw1 = load_d(is);
+        args.opts_dual_energy_sw2 = load_d(is);
+        args.physcon_A = load_d(is);
+        args.physcon_B = load_d(is);
+        args.physcon_c = load_d(is);
+        args.er_i = load_i(is);
+        args.fx_i = load_i(is);
+        args.fy_i = load_i(is);
+        args.fz_i = load_i(is);
+        args.d = load_i(is);
+        args.rho = load_v(is);
+        args.sx = load_v(is);
+        args.sy = load_v(is);
+        args.sz = load_v(is);
+        args.egas = load_v(is);
+        args.tau = load_v(is);
+        args.fgamma = load_d(is);
+        args.U = load_a(is);
+        args.mmw = load_v(is);
+        args.X_spc = load_v(is);
+        args.Z_spc = load_v(is);
+        args.dt = load_d(is);
+        args.clightinv = load_d(is);
 
         if (is.eof())
         {
@@ -167,11 +165,11 @@ namespace octotiger {
         }
 
         fx_outs outs;
-        outs.sx = load_v(is, "sx");
-        outs.sy = load_v(is, "sy");
-        outs.sz = load_v(is, "sz");
-        outs.egas = load_v(is, "egas");
-        outs.U = load_a(is, "U");
+        outs.sx = load_v(is);
+        outs.sy = load_v(is);
+        outs.sz = load_v(is);
+        outs.egas = load_v(is);
+        outs.U = load_a(is);
 
         if (is.eof())
         {
