@@ -35,6 +35,10 @@ if(OCTORAD_WITH_CUDA)
     target_compile_options(kernel_gpu PRIVATE --default-stream per-thread -Xptxas -v)
     #set(CMAKE_CUDA_FLAGS "--default-stream per-thread -Xptxas -v")
 
+    # CUDA enabled macro
+    target_compile_definitions(kernel_gpu INTERFACE
+        OCTORAD_HAVE_CUDA)
+
     # allow CUDA code to call device functions implemented in other translation units
     # improve incremental build performance (only recompile and link modified units)
     #set_target_properties(kernel_gpu PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -85,9 +89,6 @@ add_executable(fidelity_test
 if(OCTORAD_WITH_CUDA)
     # link with the kernel
     target_link_libraries(fidelity_test PRIVATE kernel_gpu)
-    # cuda enabled macro
-    target_compile_definitions(fidelity_test PRIVATE
-        OCTORAD_HAVE_CUDA)
 endif()
 target_link_libraries(fidelity_test PRIVATE case_loader kernel_cpu kernel_v2)
 
@@ -106,14 +107,24 @@ add_executable(profile_test
 if(OCTORAD_WITH_CUDA)
     # link with the kernel
     target_link_libraries(profile_test PRIVATE kernel_gpu)
-    # cuda enabled macro
-    target_compile_definitions(profile_test PRIVATE
-        OCTORAD_HAVE_CUDA)
 endif()
 target_link_libraries(profile_test PRIVATE case_loader kernel_cpu kernel_v2)
 
 ###############################################################################
+# args array sizes test
+###############################################################################
+add_executable(arg_array_sizes_test
+    tests/arg_array_sizes_test.cpp
+    config.hpp
+    utils/util.hpp
+)
+target_link_libraries(arg_array_sizes_test PRIVATE case_loader)
+
+###############################################################################
 # IDE settings
 ###############################################################################
-set_property(TARGET fidelity_test profile_test PROPERTY FOLDER "Octo-tiger/Tests")
+set_property(
+    TARGET fidelity_test profile_test arg_array_sizes_test
+    PROPERTY FOLDER "Octo-tiger/Tests"
+)
 
