@@ -15,7 +15,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-constexpr std::size_t loop_iterations = RAD_NX - (2 * RAD_BW);
+constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
 
 struct space_vector
 {
@@ -97,7 +97,7 @@ struct d_pair
     T2 second{};
 };
 
-__device__ inline std::int64_t hindex(
+__device__ __host__ inline std::int64_t hindex(
     std::int64_t i, std::int64_t j, std::int64_t k)
 {
     return i * H_DNX + j * H_DNY + k * H_DNZ;
@@ -145,7 +145,7 @@ __device__ inline T sqr(T const& val)
 }
 
 template <typename T>
-__device__ inline T cube(T const& val)
+__device__ __host__ inline T cube(T const& val)
 {
     return val * val * val;
 }
@@ -339,26 +339,28 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     std::int64_t const fy_i,
     std::int64_t const fz_i,
     std::int64_t const d,
-    double const* const rho, std::size_t rho_size,
-    double* const sx, std::size_t sx_size,
-    double* const sy, std::size_t sy_size,
-    double* const sz, std::size_t sz_size,
-    double* const egas, std::size_t egas_size,
-    double* const tau, std::size_t tau_size,
+    std::size_t const grid_i_size,
+    std::size_t const Ui_size,
+    double const* const rho,
+    double* const sx,
+    double* const sy,
+    double* const sz,
+    double* const egas,
+    double* const tau,
     double const fgamma,
-    double* const U, std::size_t Ui_size,
-    double const* const mmw, std::size_t mmw_size,
-    double const* const X_spc, std::size_t X_spc_size,
-    double const* const Z_spc, std::size_t Z_spc_size,
+    double* const U,
+    double const* const mmw,
+    double const* const X_spc,
+    double const* const Z_spc,
     double const dt,
     double const clightinv)
 {
-    std::int64_t i = threadIdx.x + RAD_BW;
-    std::int64_t j = threadIdx.y + RAD_BW;
-    std::int64_t k = threadIdx.z + RAD_BW;
+    std::int64_t const i = threadIdx.x;
+    std::int64_t const j = threadIdx.y;
+    std::int64_t const k = threadIdx.z;
 
-    std::int64_t const iiih = hindex(i + d, j + d, k + d);
-    std::int64_t const iiir = rindex(i, j, k);
+    std::int64_t const iiih = (i * grid_i_size + j) * grid_i_size + k;
+    std::int64_t const iiir = (i * grid_i_size + j) * grid_i_size + k;
     double const den = rho[iiih];
     double const deninv = INVERSE(den);
     double vx = sx[iiih] * deninv;
@@ -439,7 +441,7 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     }
     if (opts_problem == MARSHAK)
     {
-        sx[iiih] = sy[iiih] = sz[iiih] = 0;
+        sx[iiih] = sy[iiih] = sz[iiih] = 0.0;
         egas[iiih] = e;
     }
 }
@@ -472,20 +474,61 @@ namespace octotiger {
         double const dt,
         double const clightinv)
     {
-        double* d_rho = alloc_copy_device(rho);
-        double* d_sx = alloc_copy_device(sx);
-        double* d_sy = alloc_copy_device(sy);
-        double* d_sz = alloc_copy_device(sz);
-        double* d_egas = alloc_copy_device(egas);
-        double* d_tau = alloc_copy_device(tau);
-        double* d_U = alloc_copy_device(U);
-        double* d_mmw = alloc_copy_device(mmw);
-        double* d_X_spc = alloc_copy_device(X_spc);
-        double* d_Z_spc = alloc_copy_device(Z_spc);
+        std::size_t const grid_array_size = cube(RAD_GRID_I);
+        std::vector<double> h_rho(grid_array_size);
+        std::vector<double> h_sx(grid_array_size);
+        std::vector<double> h_sy(grid_array_size);
+        std::vector<double> h_sz(grid_array_size);
+        std::vector<double> h_egas(grid_array_size);
+        std::vector<double> h_tau(grid_array_size);
+        std::vector<double> h_U(NRF * grid_array_size);
+        std::vector<double> h_mmw(grid_array_size);
+        std::vector<double> h_X_spc(grid_array_size);
+        std::vector<double> h_Z_spc(grid_array_size);
+
+        {
+            std::size_t index_counter{};
+            for (std::size_t i = RAD_BW; i != RAD_NX - RAD_BW; ++i)
+            {
+                for (std::size_t j = RAD_BW; j != RAD_NX - RAD_BW; ++j)
+                {
+                    for (std::size_t k = RAD_BW; k != RAD_NX - RAD_BW; ++k)
+                    {
+                        std::size_t const iiih = hindex(i + d, j + d, k + d);
+                        h_rho[index_counter] = rho[iiih];
+                        h_sx[index_counter] = sx[iiih];
+                        h_sy[index_counter] = sy[iiih];
+                        h_sz[index_counter] = sz[iiih];
+                        h_egas[index_counter] = egas[iiih];
+                        h_tau[index_counter] = tau[iiih];
+                        for (std::size_t l = 0; l < NRF; ++l)
+                        {
+                            h_U[l * grid_array_size + index_counter] = U[l][iiih];
+                        }
+                        h_mmw[index_counter] = mmw[iiih];
+                        h_X_spc[index_counter] = X_spc[iiih];
+                        h_Z_spc[index_counter] = Z_spc[iiih];
+
+                        ++index_counter;
+                    }
+                }
+            }
+        }
+
+        double* d_rho = alloc_copy_device(h_rho);
+        double* d_sx = alloc_copy_device(h_sx);
+        double* d_sy = alloc_copy_device(h_sy);
+        double* d_sz = alloc_copy_device(h_sz);
+        double* d_egas = alloc_copy_device(h_egas);
+        double* d_tau = alloc_copy_device(h_tau);
+        double* d_U = alloc_copy_device(h_U);
+        double* d_mmw = alloc_copy_device(h_mmw);
+        double* d_X_spc = alloc_copy_device(h_X_spc);
+        double* d_Z_spc = alloc_copy_device(h_Z_spc);
 
         //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
         // NOTE: too many registers (currently 168)
-        radiation_impl<<<1, dim3(loop_iterations, loop_iterations, loop_iterations)>>>(
+        radiation_impl<<<1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I)>>>(
             opts_eos,
             opts_problem,
             opts_dual_energy_sw1,
@@ -498,27 +541,53 @@ namespace octotiger {
             fy_i,
             fz_i,
             d,
-            d_rho, rho.size(),
-            d_sx, sx.size(),
-            d_sy, sy.size(),
-            d_sz, sz.size(),
-            d_egas, egas.size(),
-            d_tau, tau.size(),
+            RAD_GRID_I,
+            grid_array_size,
+            d_rho,
+            d_sx,
+            d_sy,
+            d_sz,
+            d_egas,
+            d_tau,
             fgamma,
-            d_U, U[0].size(),
-            d_mmw, mmw.size(),
-            d_X_spc, X_spc.size(),
-            d_Z_spc, Z_spc.size(),
+            d_U,
+            d_mmw,
+            d_X_spc,
+            d_Z_spc,
             dt,
             clightinv
             );
         throw_if_cuda_error();
 
-        copy_from_device(d_sx, sx);
-        copy_from_device(d_sy, sy);
-        copy_from_device(d_sz, sz);
-        copy_from_device(d_egas, egas);
-        copy_from_device(d_U, U);
+        copy_from_device(d_sx, h_sx);
+        copy_from_device(d_sy, h_sy);
+        copy_from_device(d_sz, h_sz);
+        copy_from_device(d_egas, h_egas);
+        copy_from_device(d_U, h_U);
+
+        {
+            std::size_t index_counter{};
+            for (std::size_t i = RAD_BW; i < RAD_NX - RAD_BW; ++i)
+            {
+                for (std::size_t j = RAD_BW; j < RAD_NX - RAD_BW; ++j)
+                {
+                    for (std::size_t k = RAD_BW; k < RAD_NX - RAD_BW; ++k)
+                    {
+                        std::size_t const iiih = hindex(i + d, j + d, k + d);
+                        sx[iiih] = h_sx[index_counter];
+                        sy[iiih] = h_sy[index_counter];
+                        sz[iiih] = h_sz[index_counter];
+                        egas[iiih] = h_egas[index_counter];
+                        for (std::size_t l = 0; l < NRF; ++l)
+                        {
+                            U[l][iiih] = h_U[l * grid_array_size + index_counter];
+                        }
+
+                        ++index_counter;
+                    }
+                }
+            }
+        }
 
         free_device(d_rho);
         free_device(d_sx);
