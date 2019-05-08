@@ -25,10 +25,17 @@ inline void throw_if_cuda_error()
 }
 
 template <typename T>
-T* alloc_copy_device(std::vector<T> const& v)
+T* alloc_device(std::size_t const size)
 {
     T* device_ptr;
-    cudaMalloc((void**) &device_ptr, v.size() * sizeof(T));
+    throw_if_cuda_error(cudaMalloc((void**) &device_ptr, size));
+    return device_ptr;
+}
+
+template <typename T>
+T* alloc_copy_device(std::vector<T> const& v)
+{
+    T* const device_ptr = alloc_device<T>(v.size() * sizeof(T));
     throw_if_cuda_error(cudaMemcpy(
         device_ptr, &v[0], v.size() * sizeof(T), cudaMemcpyHostToDevice));
     return device_ptr;
@@ -37,8 +44,7 @@ T* alloc_copy_device(std::vector<T> const& v)
 template <typename T, std::size_t N>
 T* alloc_copy_device(std::array<std::vector<T>, N> const& a)
 {
-    T* device_ptr;
-    cudaMalloc((void**) &device_ptr, N * a[0].size() * sizeof(T));
+    T* const device_ptr = alloc_device<T>(N * a[0].size() * sizeof(T));
     for (std::size_t i = 0; i < N; ++i)
     {
         throw_if_cuda_error(cudaMemcpy(device_ptr + i * a[0].size(), &a[i][0],

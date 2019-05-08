@@ -103,36 +103,30 @@ __device__ __host__ inline std::int64_t hindex(
     return i * H_DNX + j * H_DNY + k * H_DNZ;
 }
 
-__device__ inline std::int64_t rindex(
-    std::int64_t x, std::int64_t y, std::int64_t z)
-{
-    return z + RAD_NX * (y + RAD_NX * x);
-}
-
 __device__ inline double INVERSE(double a)
 {
     return 1.0 / a;
 }
 
-template <class U>
-__device__ U B_p(
-    std::int64_t const opts_problem, double const physcon_c, U rho, U e, U mmw)
+template <typename T>
+__device__ T B_p(
+    std::int64_t const opts_problem, double const physcon_c, T rho, T e, T mmw)
 {
     assert(opts_problem == MARSHAK);
-    return U((physcon_c / 4.0 / M_PI)) * e;
+    return T((physcon_c / 4.0 / M_PI)) * e;
 }
 
-template <class U>
-__device__ U kappa_p(
-    std::int64_t const opts_problem, U rho, U e, U mmw, double X, double Z)
+template <typename T>
+__device__ T kappa_p(
+    std::int64_t const opts_problem, T rho, T e, T mmw, double X, double Z)
 {
     assert(opts_problem == MARSHAK);
     return MARSHAK_OPAC;
 }
 
-template <class U>
-__device__ U kappa_R(
-    std::int64_t const opts_problem, U rho, U e, U mmw, double X, double Z)
+template <typename T>
+__device__ T kappa_R(
+    std::int64_t const opts_problem, T rho, T e, T mmw, double X, double Z)
 {
     assert(opts_problem == MARSHAK);
     return MARSHAK_OPAC;
