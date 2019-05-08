@@ -169,6 +169,7 @@ namespace octotiger {
         outs.sy = load_v(is);
         outs.sz = load_v(is);
         outs.egas = load_v(is);
+        //outs.tau = load_v(is);
         outs.U = load_a(is);
 
         if (is.eof())

@@ -43,6 +43,7 @@ namespace octotiger {
         std::vector<double> sy{};
         std::vector<double> sz{};
         std::vector<double> egas{};
+        std::vector<double> tau{};
         std::array<std::vector<double>, NRF> U{};
     };
 

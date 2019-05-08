@@ -509,16 +509,16 @@ namespace octotiger {
             }
         }
 
-        double* d_rho = alloc_copy_device(h_rho);
-        double* d_sx = alloc_copy_device(h_sx);
-        double* d_sy = alloc_copy_device(h_sy);
-        double* d_sz = alloc_copy_device(h_sz);
-        double* d_egas = alloc_copy_device(h_egas);
-        double* d_tau = alloc_copy_device(h_tau);
-        double* d_U = alloc_copy_device(h_U);
-        double* d_mmw = alloc_copy_device(h_mmw);
-        double* d_X_spc = alloc_copy_device(h_X_spc);
-        double* d_Z_spc = alloc_copy_device(h_Z_spc);
+        double const* const d_rho = alloc_copy_to_device(h_rho);
+        double* const d_sx = alloc_copy_to_device(h_sx);
+        double* const d_sy = alloc_copy_to_device(h_sy);
+        double* const d_sz = alloc_copy_to_device(h_sz);
+        double* const d_egas = alloc_copy_to_device(h_egas);
+        double* const d_tau = alloc_copy_to_device(h_tau);
+        double* const d_U = alloc_copy_to_device(h_U);
+        double const* const d_mmw = alloc_copy_to_device(h_mmw);
+        double const* const d_X_spc = alloc_copy_to_device(h_X_spc);
+        double const* const d_Z_spc = alloc_copy_to_device(h_Z_spc);
 
         //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
         // NOTE: too many registers (currently 168)
@@ -557,6 +557,7 @@ namespace octotiger {
         copy_from_device(d_sy, h_sy);
         copy_from_device(d_sz, h_sz);
         copy_from_device(d_egas, h_egas);
+        copy_from_device(d_tau, h_tau);
         copy_from_device(d_U, h_U);
 
         {
