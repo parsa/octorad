@@ -31,7 +31,7 @@ namespace octotiger {
             if (*format == '%')
             {
                 ss << value;
-                tprintf(format + 1, Fargs...);
+                sstprintf(ss, format + 1, Fargs...);
                 return ss;
             }
             ss << *format;
