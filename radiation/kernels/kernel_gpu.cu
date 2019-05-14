@@ -509,20 +509,20 @@ namespace octotiger {
             }
         }
 
-        double const* const d_rho = alloc_copy_to_device(h_rho);
-        double* const d_sx = alloc_copy_to_device(h_sx);
-        double* const d_sy = alloc_copy_to_device(h_sy);
-        double* const d_sz = alloc_copy_to_device(h_sz);
-        double* const d_egas = alloc_copy_to_device(h_egas);
-        double* const d_tau = alloc_copy_to_device(h_tau);
-        double* const d_U = alloc_copy_to_device(h_U);
-        double const* const d_mmw = alloc_copy_to_device(h_mmw);
-        double const* const d_X_spc = alloc_copy_to_device(h_X_spc);
-        double const* const d_Z_spc = alloc_copy_to_device(h_Z_spc);
+        double const* const d_rho = device_alloc_copy_from_host(h_rho);
+        double* const d_sx = device_alloc_copy_from_host(h_sx);
+        double* const d_sy = device_alloc_copy_from_host(h_sy);
+        double* const d_sz = device_alloc_copy_from_host(h_sz);
+        double* const d_egas = device_alloc_copy_from_host(h_egas);
+        double* const d_tau = device_alloc_copy_from_host(h_tau);
+        double* const d_U = device_alloc_copy_from_host(h_U);
+        double const* const d_mmw = device_alloc_copy_from_host(h_mmw);
+        double const* const d_X_spc = device_alloc_copy_from_host(h_X_spc);
+        double const* const d_Z_spc = device_alloc_copy_from_host(h_Z_spc);
 
         //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
         // NOTE: too many registers (currently 168)
-        radiation_impl<<<1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I)>>>(
+        launch_kernel(radiation_impl, 1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,
             opts_eos,
             opts_problem,
             opts_dual_energy_sw1,
@@ -551,14 +551,13 @@ namespace octotiger {
             dt,
             clightinv
             );
-        throw_if_cuda_error();
 
-        copy_from_device(d_sx, h_sx);
-        copy_from_device(d_sy, h_sy);
-        copy_from_device(d_sz, h_sz);
-        copy_from_device(d_egas, h_egas);
-        copy_from_device(d_tau, h_tau);
-        copy_from_device(d_U, h_U);
+        device_copy_to_host(d_sx, h_sx);
+        device_copy_to_host(d_sy, h_sy);
+        device_copy_to_host(d_sz, h_sz);
+        device_copy_to_host(d_egas, h_egas);
+        device_copy_to_host(d_tau, h_tau);
+        device_copy_to_host(d_U, h_U);
 
         {
             std::size_t index_counter{};
@@ -584,15 +583,15 @@ namespace octotiger {
             }
         }
 
-        free_device(d_rho);
-        free_device(d_sx);
-        free_device(d_sy);
-        free_device(d_sz);
-        free_device(d_egas);
-        free_device(d_tau);
-        free_device(d_U);
-        free_device(d_mmw);
-        free_device(d_X_spc);
-        free_device(d_Z_spc);
+        device_free(d_rho);
+        device_free(d_sx);
+        device_free(d_sy);
+        device_free(d_sz);
+        device_free(d_egas);
+        device_free(d_tau);
+        device_free(d_U);
+        device_free(d_mmw);
+        device_free(d_X_spc);
+        device_free(d_Z_spc);
     }
 }
