@@ -39,7 +39,8 @@ void run_case_on_kernel(octotiger::fx_case test_case, K kernel)
         octotiger::are_ranges_same(test_case.args.U, test_case.outs.U, "U");
     if (!success)
     {
-        throw octotiger::formatted_exception("case % code integrity check failed", test_case.index);
+        throw octotiger::formatted_exception(
+            "case % code integrity check failed", test_case.index);
     }
 }
 
@@ -51,16 +52,18 @@ void run_case(std::size_t index)
     std::printf("***** cpu kernel (reference) *****\n");
     double cpu_kernel_duration{};
     {
+        octotiger::radiation_cpu_kernel krnl(test_case.data_size);
         scoped_timer<double>{cpu_kernel_duration};
-        run_case_on_kernel(test_case, octotiger::radiation_cpu_kernel);
+        run_case_on_kernel(test_case, std::move(krnl));
     }
     std::printf("duration: %g\n", cpu_kernel_duration);
 
     std::printf("***** cpu kernel (v2) *****\n");
     double v2_kernel_duration{};
     {
+        octotiger::radiation_v2_kernel krnl(test_case.data_size);
         scoped_timer<double>{v2_kernel_duration};
-        run_case_on_kernel(test_case, octotiger::radiation_v2_kernel);
+        run_case_on_kernel(test_case, std::move(krnl));
     }
     std::printf("duration: %g\n", v2_kernel_duration);
 
@@ -68,8 +71,9 @@ void run_case(std::size_t index)
     std::printf("***** gpu kernel (ported code) *****\n");
     double gpu_kernel_duration{};
     {
+        octotiger::radiation_gpu_kernel krnl(test_case.data_size);
         scoped_timer<double>{gpu_kernel_duration};
-        run_case_on_kernel(test_case, octotiger::radiation_gpu_kernel);
+        run_case_on_kernel(test_case, std::move(krnl));
     }
     std::printf("duration: %g\n", gpu_kernel_duration);
 #endif

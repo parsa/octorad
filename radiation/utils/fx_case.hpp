@@ -50,6 +50,7 @@ namespace octotiger {
     struct fx_case
     {
         std::size_t index{};
+        std::size_t data_size{};
         fx_args args;
         fx_outs outs;
     };

@@ -188,6 +188,7 @@ namespace octotiger {
         ret.index = index;
         ret.args = load_case_args(index);
         ret.outs = load_case_outs(index);
+        ret.data_size = ret.args.rho.size();
 
         return ret;
     }

@@ -1,5 +1,5 @@
 #include "config.hpp"
-#include "kernels/kernel_cpu.hpp"
+#include "kernels/kernel_v2.hpp"
 #include "utils/util.hpp"
 
 #include <algorithm>
@@ -358,7 +358,9 @@ namespace octotiger {
             }
         }
     }
-    void radiation_v2_kernel(std::int64_t const opts_eos,
+    radiation_v2_kernel::radiation_v2_kernel(std::size_t count) {}
+    radiation_v2_kernel::radiation_v2_kernel(radiation_v2_kernel&&) {}
+    void radiation_v2_kernel::operator()(std::int64_t const opts_eos,
         std::int64_t const opts_problem, double const opts_dual_energy_sw1,
         double const opts_dual_energy_sw2, double const physcon_A,
         double const physcon_B, double const physcon_c, std::int64_t const er_i,

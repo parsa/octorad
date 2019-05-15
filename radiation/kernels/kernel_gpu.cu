@@ -1,6 +1,6 @@
 #include "config.hpp"
-#include "kernels/kernel_gpu.hpp"
 #include "kernels/helpers.hpp"
+#include "kernels/kernel_gpu.hpp"
 
 #include <array>
 #include <cassert>
@@ -14,6 +14,7 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "kernel_gpu.hpp"
 
 constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
 
@@ -89,7 +90,9 @@ template <typename T1, typename T2>
 struct d_pair
 {
     explicit d_pair() = default;
-    __device__ d_pair(T1 f, T2 s) : first(f), second(s)
+    __device__ d_pair(T1 f, T2 s)
+      : first(f)
+      , second(s)
     {
     }
 
@@ -201,8 +204,8 @@ __device__ inline double& e_ij(
 }
 
 template <typename F>
-__device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F const test,
-    double const E, double const eg_t)
+__device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
+    F const test, double const E, double const eg_t)
 {
     // Bisection root finding method
     // Indices of max, mid, and min
@@ -220,8 +223,7 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0, F c
     for (std::size_t i = 0; i < max_iterations; ++i)
     {
         // Root solver has converged if error is smaller that error tolerance
-        double const error =
-            fmax(fabs(f_mid), fabs(f_min)) / (E + eg_t);
+        double const error = fmax(fabs(f_mid), fabs(f_min)) / (E + eg_t);
         if (error < error_tolerance)
         {
             return;
@@ -320,34 +322,34 @@ __device__ d_pair<double, space_vector> implicit_radiation_step(
         double((E - E0) * dtinv * rhoc2), ((F - F0) * dtinv * rhoc2 * c));
 }
 
-__global__ void __launch_bounds__(512, 1) radiation_impl(
-    std::int64_t const opts_eos,
-    std::int64_t const opts_problem,
-    double const opts_dual_energy_sw1,
-    double const opts_dual_energy_sw2,
-    double const physcon_A,
-    double const physcon_B,
-    double const physcon_c,
-    std::int64_t const er_i,
-    std::int64_t const fx_i,
-    std::int64_t const fy_i,
-    std::int64_t const fz_i,
-    std::int64_t const d,
-    std::size_t const grid_i_size,
-    std::size_t const Ui_size,
-    double const* const rho,
-    double* const sx,
-    double* const sy,
-    double* const sz,
-    double* const egas,
-    double* const tau,
-    double const fgamma,
-    double* const U,
-    double const* const mmw,
-    double const* const X_spc,
-    double const* const Z_spc,
-    double const dt,
-    double const clightinv)
+__global__ void __launch_bounds__(512, 1)
+    radiation_impl(std::int64_t const opts_eos,
+        std::int64_t const opts_problem,
+        double const opts_dual_energy_sw1,
+        double const opts_dual_energy_sw2,
+        double const physcon_A,
+        double const physcon_B,
+        double const physcon_c,
+        std::int64_t const er_i,
+        std::int64_t const fx_i,
+        std::int64_t const fy_i,
+        std::int64_t const fz_i,
+        std::int64_t const d,
+        std::size_t const grid_i_size,
+        std::size_t const Ui_size,
+        double const* const rho,
+        double* const sx,
+        double* const sy,
+        double* const sz,
+        double* const egas,
+        double* const tau,
+        double const fgamma,
+        double* const U,
+        double const* const mmw,
+        double const* const X_spc,
+        double const* const Z_spc,
+        double const dt,
+        double const clightinv)
 {
     std::int64_t const i = threadIdx.x;
     std::int64_t const j = threadIdx.y;
@@ -423,14 +425,16 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
     }
     if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
     {
-        std::printf("Er = %e %e %e %e\n", E0, E1, e_ij(U, Ui_size, er_i, iiir), dt);
+        std::printf(
+            "Er = %e %e %e %e\n", E0, E1, e_ij(U, Ui_size, er_i, iiir), dt);
         assert(false);
     }
     e = fmax(e, 0.0);
     tau[iiih] = std::pow(e, INVERSE(fgamma));
     if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
     {
-        std::printf("2231242!!! %e %e %e \n", E0, e_ij(U, Ui_size, er_i, iiir), dE_dt * dt);
+        std::printf("2231242!!! %e %e %e \n", E0, e_ij(U, Ui_size, er_i, iiir),
+            dE_dt * dt);
         assert(false);
     }
     if (opts_problem == MARSHAK)
@@ -441,7 +445,49 @@ __global__ void __launch_bounds__(512, 1) radiation_impl(
 }
 
 namespace octotiger {
-    void radiation_gpu_kernel(std::int64_t const opts_eos,
+    radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
+      : d_rho(device_alloc<double>(sizeof(double) * count))
+      , d_sx(device_alloc<double>(sizeof(double) * count))
+      , d_sy(device_alloc<double>(sizeof(double) * count))
+      , d_sz(device_alloc<double>(sizeof(double) * count))
+      , d_egas(device_alloc<double>(sizeof(double) * count))
+      , d_tau(device_alloc<double>(sizeof(double) * count))
+      , d_U(device_alloc<double>(sizeof(double) * count * NRF))
+      , d_mmw(device_alloc<double>(sizeof(double) * count))
+      , d_X_spc(device_alloc<double>(sizeof(double) * count))
+      , d_Z_spc(device_alloc<double>(sizeof(double) * count))
+    {
+    }
+
+    radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
+    {
+        std::swap(d_rho, other.d_rho);
+        std::swap(d_sx, other.d_sx);
+        std::swap(d_sy, other.d_sy);
+        std::swap(d_sz, other.d_sz);
+        std::swap(d_egas, other.d_egas);
+        std::swap(d_tau, other.d_tau);
+        std::swap(d_U, other.d_U);
+        std::swap(d_mmw, other.d_mmw);
+        std::swap(d_X_spc, other.d_X_spc);
+        std::swap(d_Z_spc, other.d_Z_spc);
+    }
+
+    radiation_gpu_kernel::~radiation_gpu_kernel()
+    {
+        device_free(d_rho);
+        device_free(d_sx);
+        device_free(d_sy);
+        device_free(d_sz);
+        device_free(d_egas);
+        device_free(d_tau);
+        device_free(d_U);
+        device_free(d_mmw);
+        device_free(d_X_spc);
+        device_free(d_Z_spc);
+    }
+
+    void radiation_gpu_kernel::operator()(std::int64_t const opts_eos,
         std::int64_t const opts_problem,
         double const opts_dual_energy_sw1,
         double const opts_dual_energy_sw2,
@@ -497,7 +543,8 @@ namespace octotiger {
                         h_tau[index_counter] = tau[iiih];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            h_U[l * grid_array_size + index_counter] = U[l][iiih];
+                            h_U[l * grid_array_size + index_counter] =
+                                U[l][iiih];
                         }
                         h_mmw[index_counter] = mmw[iiih];
                         h_X_spc[index_counter] = X_spc[iiih];
@@ -509,19 +556,18 @@ namespace octotiger {
             }
         }
 
-        double const* const d_rho = device_alloc_copy_from_host(h_rho);
-        double* const d_sx = device_alloc_copy_from_host(h_sx);
-        double* const d_sy = device_alloc_copy_from_host(h_sy);
-        double* const d_sz = device_alloc_copy_from_host(h_sz);
-        double* const d_egas = device_alloc_copy_from_host(h_egas);
-        double* const d_tau = device_alloc_copy_from_host(h_tau);
-        double* const d_U = device_alloc_copy_from_host(h_U);
-        double const* const d_mmw = device_alloc_copy_from_host(h_mmw);
-        double const* const d_X_spc = device_alloc_copy_from_host(h_X_spc);
-        double const* const d_Z_spc = device_alloc_copy_from_host(h_Z_spc);
+        device_copy_from_host(d_rho, h_rho);
+        device_copy_from_host(d_sx, h_sx);
+        device_copy_from_host(d_sy, h_sy);
+        device_copy_from_host(d_sz, h_sz);
+        device_copy_from_host(d_egas, h_egas);
+        device_copy_from_host(d_tau, h_tau);
+        device_copy_from_host(d_U, h_U);
+        device_copy_from_host(d_mmw, h_mmw);
+        device_copy_from_host(d_X_spc, h_X_spc);
+        device_copy_from_host(d_Z_spc, h_Z_spc);
 
-        //cudaLaunchKernel(radiation_impl, 1, 1, args, 0, 0)
-        // NOTE: too many registers (currently 168)
+        // launch the kernel
         launch_kernel(radiation_impl, 1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,
             opts_eos,
             opts_problem,
@@ -574,7 +620,8 @@ namespace octotiger {
                         egas[iiih] = h_egas[index_counter];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            U[l][iiih] = h_U[l * grid_array_size + index_counter];
+                            U[l][iiih] =
+                                h_U[l * grid_array_size + index_counter];
                         }
 
                         ++index_counter;
@@ -582,16 +629,5 @@ namespace octotiger {
                 }
             }
         }
-
-        device_free(d_rho);
-        device_free(d_sx);
-        device_free(d_sy);
-        device_free(d_sz);
-        device_free(d_egas);
-        device_free(d_tau);
-        device_free(d_U);
-        device_free(d_mmw);
-        device_free(d_X_spc);
-        device_free(d_Z_spc);
     }
 }
