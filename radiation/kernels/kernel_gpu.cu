@@ -457,6 +457,7 @@ namespace octotiger {
       , d_X_spc(device_alloc<double>(sizeof(double) * count))
       , d_Z_spc(device_alloc<double>(sizeof(double) * count))
     {
+        cudaFree(0);
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
