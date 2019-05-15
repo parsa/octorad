@@ -3,7 +3,7 @@ if(NOT EXISTS ${OCTORAD_DUMP_DIR} OR NOT IS_DIRECTORY ${OCTORAD_DUMP_DIR})
     message(FATAL_ERROR "Unable to access dump directory.")
 endif()
 message(STATUS "OCTORAD_DUMP_DIR is set to: " ${OCTORAD_DUMP_DIR})
-message(STATUS "Number of dumped cases is set to: " ${OCTORAD_DUMP_COUNT})
+message(STATUS "OCTORAD_DUMP_COUNT is set to: " ${OCTORAD_DUMP_COUNT})
 
 ###############################################################################
 # general configuration
@@ -19,7 +19,7 @@ target_include_directories(global_config INTERFACE
     ${PROJECT_SOURCE_DIR}/radiation)
 # Number of dumped cases
 target_compile_definitions(global_config INTERFACE
-    OCTORAD_DUMP_COUNT ${OCTORAD_DUMP_COUNT})
+    OCTORAD_DUMP_COUNT=${OCTORAD_DUMP_COUNT})
 # Vc integration
 if(OCTORAD_WITH_VC)
     target_link_libraries(global_config INTERFACE octorad_vc)
