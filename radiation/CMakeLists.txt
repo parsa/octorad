@@ -12,11 +12,14 @@ add_library(global_config INTERFACE)
 # MSVC-specific <math.h> macro
 if(MSVC)
     target_compile_definitions(global_config INTERFACE
-        _USE_MATH_DEFINES
-        OCTORAD_DUMP_COUNT ${OCTORAD_DUMP_COUNT})
+        _USE_MATH_DEFINES)
 endif()
+# Add headers folder to compiler lookup paths
 target_include_directories(global_config INTERFACE
     ${PROJECT_SOURCE_DIR}/radiation)
+# Number of dumped cases
+target_compile_definitions(global_config INTERFACE
+    OCTORAD_DUMP_COUNT ${OCTORAD_DUMP_COUNT})
 # Vc integration
 if(OCTORAD_WITH_VC)
     target_link_libraries(global_config INTERFACE octorad_vc)
