@@ -112,7 +112,7 @@ int main()
             // CPU case is the reference execution time
             reference_execution_time = execution_time;
 
-            std::printf("execution time: %gns\n", execution_time);
+            std::printf("execution time: %gus\n", execution_time);
             std::printf("speedup: %g\n", 1.0);
         }
 
@@ -125,7 +125,7 @@ int main()
             {
                 execution_time += run_v2_case(test_case);
             }
-            std::printf("execution time: %gns\n", execution_time);
+            std::printf("execution time: %gus\n", execution_time);
             std::printf(
                 "speedup: %g\n", reference_execution_time / execution_time);
         }
@@ -140,7 +140,7 @@ int main()
             {
                 execution_time += run_gpu_case(test_case);
             }
-            std::printf("execution time: %gns\n", execution_time);
+            std::printf("execution time: %gus\n", execution_time);
             std::printf(
                 "speedup: %g\n", reference_execution_time / execution_time);
         }

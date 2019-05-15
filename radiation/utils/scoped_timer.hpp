@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cstddef>
 
-template <typename T, std::size_t R = 1000000000>
+template <typename T>
 struct scoped_timer
 {
     scoped_timer(T& r)
@@ -13,7 +13,7 @@ struct scoped_timer
     }
     ~scoped_timer()
     {
-        value = std::chrono::duration<T, std::ratio<1, R>>(
+        value = std::chrono::duration<T, std::micro>(
             std::chrono::high_resolution_clock::now() - start_timepoint)
                     .count();
     }
