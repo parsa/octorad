@@ -58,7 +58,7 @@ template <typename T, std::size_t N>
 T* device_alloc_copy_from_host(std::array<std::vector<T>, N> const& a)
 {
     T* const device_ptr = device_alloc<T>(N * a[0].size() * sizeof(T));
-    device_copy_from_host<T, N>(device_ptr, v);
+    device_copy_from_host<T, N>(device_ptr, a);
     return device_ptr;
 }
 
