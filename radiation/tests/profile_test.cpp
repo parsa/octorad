@@ -89,12 +89,15 @@ int main()
         for (std::size_t i = 0; i < load_case_count; ++i)
         {
             std::size_t case_id = select_random_case();
-            std::printf("\rloading case %zd", case_id);
+            double const perecent_loaded = 100.0 * static_cast<double>(i) /
+                static_cast<double>(load_case_count);
+            std::printf("\rloaded %g%% of the cases", perecent_loaded);
+            std::fflush(stdout);
             //test_cases.emplace_back(octotiger::import_case(i));
             test_cases.emplace_back(
                 octotiger::import_case(case_id));
         }
-        std::printf("\rloaded %zd cases     \n", load_case_count);
+        std::printf("\rloaded %zd cases       \n", load_case_count);
 
         double reference_execution_time{};
         {
