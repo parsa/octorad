@@ -9,6 +9,7 @@ option(OCTORAD_WITH_SCRATCHPAD "Enable the scratchpad project(s) (default: OFF)"
 option(OCTORAD_WITH_VC "Enable Vc model, requires Vc CMake module to be visible (default: OFF)" OFF)
 option(OCTORAD_WITH_CUDA "Enable GPU kernels and testing codes (default: ON)" ON)
 
+set(OCTORAD_DUMP_COUNT "" CACHE STRING "Number of dumped cases")
 set(OCTORAD_DUMP_DIR "" CACHE PATH "Path to directory containing `*.args` and `*.outs` dump files")
 
 ###############################################################################

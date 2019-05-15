@@ -3,6 +3,7 @@ if(NOT EXISTS ${OCTORAD_DUMP_DIR} OR NOT IS_DIRECTORY ${OCTORAD_DUMP_DIR})
     message(FATAL_ERROR "Unable to access dump directory.")
 endif()
 message(STATUS "OCTORAD_DUMP_DIR is set to: " ${OCTORAD_DUMP_DIR})
+message(STATUS "Number of dumped cases is set to: " ${OCTORAD_DUMP_COUNT})
 
 ###############################################################################
 # general configuration
@@ -11,7 +12,8 @@ add_library(global_config INTERFACE)
 # MSVC-specific <math.h> macro
 if(MSVC)
     target_compile_definitions(global_config INTERFACE
-        _USE_MATH_DEFINES)
+        _USE_MATH_DEFINES
+        OCTORAD_DUMP_COUNT ${OCTORAD_DUMP_COUNT})
 endif()
 target_include_directories(global_config INTERFACE
     ${PROJECT_SOURCE_DIR}/radiation)

@@ -7,18 +7,9 @@
 #include "utils/fx_compare.hpp"
 #include "utils/util.hpp"
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <limits>
-#include <string>
-#include <thread>
-#include <vector>
+
+constexpr std::size_t case_count = OCTORAD_DUMP_COUNT;
 
 template <typename K>
 bool check_run_result(octotiger::fx_case test_case, K& kernel)
@@ -88,7 +79,9 @@ struct case_checker
 private:
     octotiger::radiation_cpu_kernel cpu_kernel;
     octotiger::radiation_v2_kernel v2_kernel;
+#if OCTORAD_HAVE_CUDA
     octotiger::radiation_gpu_kernel gpu_kernel;
+#endif
 };
 
 int main()
@@ -98,7 +91,6 @@ int main()
         octotiger::fx_case const case0 = octotiger::import_case(0);
         case_checker check_case(case0.data_size);
         //check_case(78);
-        constexpr std::size_t case_count = 13140;
         for (std::size_t i = 0; i < case_count / 100; ++i)
         {
             if (!check_case(i))
