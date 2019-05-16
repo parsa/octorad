@@ -92,25 +92,33 @@ int main()
 
         std::printf("***** load cases *****\n");
         std::vector<octotiger::fx_case> test_cases;
-        test_cases.reserve(LOAD_CASE_COUNT);
-
-        for (std::size_t i = 0; i < LOAD_CASE_COUNT; ++i)
+        double load_et{};
         {
-            double const perecent_loaded = 100.0 * static_cast<double>(i) /
-                static_cast<double>(LOAD_CASE_COUNT);
-            std::printf("\rloaded %g%% of the cases\t", perecent_loaded);
-            std::fflush(stdout);
+            scoped_timer<double, std::ratio<1>> timer(load_et);
+            test_cases.reserve(LOAD_CASE_COUNT);
+
+            for (std::size_t i = 0; i < LOAD_CASE_COUNT; ++i)
+            {
+                double const perecent_loaded = 100.0 * static_cast<double>(i) /
+                    static_cast<double>(LOAD_CASE_COUNT);
+                std::printf("\rloaded %g%% of the cases\t", perecent_loaded);
+                std::fflush(stdout);
 #if LOAD_RANDOM_CASES
-            std::size_t case_id = select_random_case(0, LOAD_CASE_COUNT - 1);
-            test_cases.emplace_back(octotiger::import_case(case_id));
+                std::size_t case_id =
+                    select_random_case(0, LOAD_CASE_COUNT - 1);
+                test_cases.emplace_back(octotiger::import_case(case_id));
 #else
-            test_cases.emplace_back(octotiger::import_case(i));
+                test_cases.emplace_back(octotiger::import_case(i));
 #endif
+            }
         }
-        std::printf("\rloaded %zd cases\t\t\n", test_cases.size());
+        std::printf(
+            "\rloaded %zd cases in %gs\t\t\n", test_cases.size(), load_et);
 
         double reference_execution_time{};
+        double cpu_kernel_et{};
         {
+            scoped_timer<double, std::ratio<1>> timer(cpu_kernel_et);
             std::printf("***** cpu kernel (reference) *****\n");
             double execution_time{};
             case_checker<octotiger::radiation_cpu_kernel> run_cpu_case(
@@ -125,8 +133,11 @@ int main()
             std::printf("execution time: %gus\n", execution_time);
             std::printf("speedup: %g\n", 1.0);
         }
+        std::printf("duration: %gs\n", cpu_kernel_et);
 
+        double v2_kernel_et{};
         {
+            scoped_timer<double, std::ratio<1>> timer(v2_kernel_et);
             std::printf("***** cpu kernel (v2) *****\n");
             double execution_time{};
             case_checker<octotiger::radiation_v2_kernel> run_v2_case(
@@ -139,9 +150,12 @@ int main()
             std::printf(
                 "speedup: %g\n", reference_execution_time / execution_time);
         }
+        std::printf("duration: %gs\n", v2_kernel_et);
 
 #if OCTORAD_HAVE_CUDA
+        double gpu_kernel_et{};
         {
+            scoped_timer<double, std::ratio<1>> timer(gpu_kernel_et);
             std::printf("***** gpu kernel (ported code) *****\n");
             double execution_time{};
             case_checker<octotiger::radiation_gpu_kernel> run_gpu_case(
@@ -154,6 +168,7 @@ int main()
             std::printf(
                 "speedup: %g\n", reference_execution_time / execution_time);
         }
+        std::printf("duration: %gs\n", gpu_kernel_et);
 #endif
     }
     catch (std::exception const& e)
