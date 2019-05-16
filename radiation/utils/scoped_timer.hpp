@@ -2,8 +2,9 @@
 
 #include <chrono>
 #include <cstddef>
+#include <ratio>
 
-template <typename T, typename R = std::milli>
+template <typename T, typename P = std::ratio<1>>
 struct scoped_timer;
 
 template <typename T, std::intmax_t N, std::intmax_t D>
