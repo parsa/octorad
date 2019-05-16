@@ -44,8 +44,8 @@ struct case_checker
 #if VERIFY_OUTCOMES
         if (verify_outcome)
         {
-            bool const success = are_ranges_same(test_case.args.egas,
-                                     test_case.outs.egas, "egas") &&
+            bool const success =
+                are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
                 are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
                 are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
                 are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
@@ -110,7 +110,12 @@ int main()
     try
     {
         std::printf("***** init device *****\n");
-        octotiger::device_init();
+        double dev_init_et{};
+        {
+            scoped_timer<double, std::milli> timer(dev_init_et);
+            octotiger::device_init();
+        }
+        std::printf("initialized device in %gms\n", dev_init_et);
 
         std::printf("***** load cases *****\n");
         std::vector<octotiger::fx_case> test_cases;
