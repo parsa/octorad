@@ -9,7 +9,7 @@
 
 #include <cstdio>
 
-constexpr std::size_t case_count = OCTORAD_DUMP_COUNT;
+constexpr std::size_t CASE_COUNT = OCTORAD_DUMP_COUNT;
 
 template <typename K>
 bool check_run_result(octotiger::fx_case test_case, K& kernel)
@@ -91,7 +91,7 @@ int main()
         octotiger::fx_case const case0 = octotiger::import_case(0);
         case_checker check_case(case0.data_size);
         //check_case(78);
-        for (std::size_t i = 0; i < case_count / 100; ++i)
+        for (std::size_t i = 0; i < CASE_COUNT / 100; ++i)
         {
             if (!check_case(i))
             {
