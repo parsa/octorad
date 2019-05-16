@@ -13,8 +13,11 @@
 #include <random>
 #include <vector>
 
+#define LOAD_RANDOM_CASES 1
+#define VERIFY_OUTCOMES 0
+
 constexpr std::size_t CASE_COUNT = OCTORAD_DUMP_COUNT;
-constexpr std::size_t LOAD_CASE_COUNT = 1000;
+constexpr std::size_t LOAD_CASE_COUNT = 100;
 
 template <typename K>
 struct case_checker
@@ -26,8 +29,7 @@ struct case_checker
     case_checker(case_checker const& other) = delete;
     case_checker(case_checker&& other) = delete;
 
-    void run_case_on_kernel(octotiger::fx_case test_case,
-        bool const verify_outcome = false)
+    void run_case_on_kernel(octotiger::fx_case test_case)
     {
         using octotiger::are_ranges_same;
 
@@ -38,20 +40,22 @@ struct case_checker
             a.egas, a.tau, a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt,
             a.clightinv);
 
-        //if (verify_outcome)
-        //{
-        //    bool const success =
-        //        are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-        //        are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-        //        are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-        //        are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-        //        are_ranges_same(test_case.args.U, test_case.outs.U, "U");
-        //    if (!success)
-        //    {
-        //        throw octotiger::formatted_exception(
-        //            "case % code integrity check failed", test_case.index);
-        //    }
-        //}
+#if VERIFY_OUTCOMES
+        if (verify_outcome)
+        {
+            bool const success =
+                are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
+                are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
+                are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
+                are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
+                are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+            if (!success)
+            {
+                throw octotiger::formatted_exception(
+                    "case % code integrity check failed", test_case.index);
+            }
+        }
+#endif
     }
 
     double operator()(octotiger::fx_case const test_case)
@@ -68,6 +72,7 @@ private:
     K kernel;
 };
 
+#if LOAD_RANDOM_CASES
 std::size_t select_random_case(std::size_t min_val, std::size_t max_val)
 {
     static std::random_device rd;
@@ -76,6 +81,7 @@ std::size_t select_random_case(std::size_t min_val, std::size_t max_val)
 
     return dist(mt);
 }
+#endif
 
 int main()
 {
@@ -90,13 +96,16 @@ int main()
 
         for (std::size_t i = 0; i < LOAD_CASE_COUNT; ++i)
         {
-            std::size_t case_id = select_random_case(0, LOAD_CASE_COUNT - 1);
             double const perecent_loaded = 100.0 * static_cast<double>(i) /
                 static_cast<double>(LOAD_CASE_COUNT);
             std::printf("\rloaded %g%% of the cases\t", perecent_loaded);
             std::fflush(stdout);
-            //test_cases.emplace_back(octotiger::import_case(i));
+#if LOAD_RANDOM_CASES
+            std::size_t case_id = select_random_case(0, LOAD_CASE_COUNT - 1);
             test_cases.emplace_back(octotiger::import_case(case_id));
+#else
+            test_cases.emplace_back(octotiger::import_case(i));
+#endif
         }
         std::printf("\rloaded %zd cases\t\t\n", test_cases.size());
 
