@@ -14,7 +14,7 @@
 #include <vector>
 
 constexpr std::size_t CASE_COUNT = OCTORAD_DUMP_COUNT;
-constexpr std::size_t LOAD_CASE_COUNT = 100;
+constexpr std::size_t LOAD_CASE_COUNT = 1000;
 
 template <typename K>
 struct case_checker
@@ -26,7 +26,7 @@ struct case_checker
     case_checker(case_checker const& other) = delete;
     case_checker(case_checker&& other) = delete;
 
-    void run_case_on_kernel(octotiger::fx_case test_case, K kernel,
+    void run_case_on_kernel(octotiger::fx_case test_case,
         bool const verify_outcome = false)
     {
         using octotiger::are_ranges_same;
@@ -58,9 +58,8 @@ struct case_checker
     {
         double cpu_kernel_duration{};
         {
-            K krnl(test_case.data_size);
             scoped_timer<double>{cpu_kernel_duration};
-            run_case_on_kernel(test_case, std::move(krnl));
+            run_case_on_kernel(test_case);
         }
         return cpu_kernel_duration;
     }
@@ -82,21 +81,24 @@ int main()
 {
     try
     {
+        std::printf("***** init device *****\n");
+        octotiger::device_init();
+
         std::printf("***** load cases *****\n");
         std::vector<octotiger::fx_case> test_cases;
         test_cases.reserve(LOAD_CASE_COUNT);
 
         for (std::size_t i = 0; i < LOAD_CASE_COUNT; ++i)
         {
-            std::size_t case_id = select_random_case(0, LOAD_CASE_COUNT);
+            std::size_t case_id = select_random_case(0, LOAD_CASE_COUNT - 1);
             double const perecent_loaded = 100.0 * static_cast<double>(i) /
                 static_cast<double>(LOAD_CASE_COUNT);
-            std::printf("\rloaded %g%% of the cases", perecent_loaded);
+            std::printf("\rloaded %g%% of the cases\t", perecent_loaded);
             std::fflush(stdout);
             //test_cases.emplace_back(octotiger::import_case(i));
             test_cases.emplace_back(octotiger::import_case(case_id));
         }
-        std::printf("\rloaded %zd cases       \n", test_cases.size());
+        std::printf("\rloaded %zd cases\t\t\n", test_cases.size());
 
         double reference_execution_time{};
         {

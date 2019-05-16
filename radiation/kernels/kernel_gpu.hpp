@@ -8,6 +8,8 @@
 #include <vector>
 
 namespace octotiger {
+    void device_init();
+
     struct radiation_gpu_kernel
     {
         radiation_gpu_kernel(std::size_t count);

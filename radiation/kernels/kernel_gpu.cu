@@ -445,6 +445,11 @@ __global__ void __launch_bounds__(512, 1)
 }
 
 namespace octotiger {
+    void device_init()
+    {
+        cudaFree(0);
+    }
+
     radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
       : d_rho(device_alloc<double>(sizeof(double) * count))
       , d_sx(device_alloc<double>(sizeof(double) * count))
@@ -457,7 +462,6 @@ namespace octotiger {
       , d_X_spc(device_alloc<double>(sizeof(double) * count))
       , d_Z_spc(device_alloc<double>(sizeof(double) * count))
     {
-        cudaFree(0);
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
