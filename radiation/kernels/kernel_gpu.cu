@@ -519,17 +519,18 @@ namespace octotiger {
         double const dt,
         double const clightinv)
     {
+        using pinned_vector = std::vector<double, cuda_host_allocator<double>>;
         std::size_t const grid_array_size = cube(RAD_GRID_I);
-        std::vector<double> h_rho(grid_array_size);
-        std::vector<double> h_sx(grid_array_size);
-        std::vector<double> h_sy(grid_array_size);
-        std::vector<double> h_sz(grid_array_size);
-        std::vector<double> h_egas(grid_array_size);
-        std::vector<double> h_tau(grid_array_size);
-        std::vector<double> h_U(NRF * grid_array_size);
-        std::vector<double> h_mmw(grid_array_size);
-        std::vector<double> h_X_spc(grid_array_size);
-        std::vector<double> h_Z_spc(grid_array_size);
+        pinned_vector h_rho(grid_array_size);
+        pinned_vector h_sx(grid_array_size);
+        pinned_vector h_sy(grid_array_size);
+        pinned_vector h_sz(grid_array_size);
+        pinned_vector h_egas(grid_array_size);
+        pinned_vector h_tau(grid_array_size);
+        pinned_vector h_U(NRF * grid_array_size);
+        pinned_vector h_mmw(grid_array_size);
+        pinned_vector h_X_spc(grid_array_size);
+        pinned_vector h_Z_spc(grid_array_size);
 
         {
             std::size_t index_counter{};

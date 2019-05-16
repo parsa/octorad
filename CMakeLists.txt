@@ -61,7 +61,8 @@ endif()
 if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_SCRATCHPAD)
     add_executable(scratchpad-01 scratchpad/scratchpad-01.cu)
     add_executable(scratchpad-02 scratchpad/scratchpad-02.cu)
-    set_property(TARGET scratchpad-01 scratchpad-02
+    add_executable(scratchpad-03 scratchpad/scratchpad-03.cu)
+    set_property(TARGET scratchpad-01 scratchpad-02 scratchpad-03
         PROPERTY FOLDER "Scratchpad")
 endif()
 
