@@ -27,6 +27,15 @@ T* device_alloc(std::size_t const size)
     return device_ptr;
 }
 
+template <typename T>
+T* device_copy_from_host(
+    T* const device_ptr, T* const payload, std::size_t const payload_size)
+{
+    throw_if_cuda_error(cudaMemcpy(
+        device_ptr, payload, payload_size * sizeof(T), cudaMemcpyHostToDevice));
+    return device_ptr;
+}
+
 template <typename T, typename Allocator>
 T* device_copy_from_host(T* const device_ptr, std::vector<T, Allocator> const& v)
 {
@@ -61,6 +70,14 @@ T* device_alloc_copy_from_host(std::array<std::vector<T, Allocator>, N> const& a
     T* const device_ptr = device_alloc<T>(N * a[0].size() * sizeof(T));
     device_copy_from_host<T, N>(device_ptr, a);
     return device_ptr;
+}
+
+template <typename T>
+void device_copy_to_host(
+    T const* const device_ptr, T* const payload, std::size_t const payload_size)
+{
+    throw_if_cuda_error(cudaMemcpy(
+        payload, device_ptr, payload_size * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
 template <typename T, typename Allocator>
@@ -139,7 +156,7 @@ public:
 
     pointer allocate(size_type num, void const* = 0)
     {
-        return host_pinned_alloc<value_type>(num * sizeof(T));
+        return host_pinned_alloc<value_type>(num * sizeof(value_type));
     }
 
     void deallocate(pointer p, size_type num)

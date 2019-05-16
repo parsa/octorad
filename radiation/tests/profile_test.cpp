@@ -99,8 +99,8 @@ double run_kernel(
             pure_et += run_cpu_case(test_case);
         }
     }
-    std::printf("execution time: %gus\n", pure_et);
-    std::printf("duration: %gs\n", overall_et);
+    std::printf("total kernel execution time: %gus\n", pure_et);
+    std::printf("overall execution time: %gs\n", overall_et);
 
     return pure_et;
 }

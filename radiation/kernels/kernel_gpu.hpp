@@ -32,15 +32,7 @@ namespace octotiger {
             double const clightinv);
 
     private:
-        double* d_rho = nullptr;
-        double* d_sx = nullptr;
-        double* d_sy = nullptr;
-        double* d_sz = nullptr;
-        double* d_egas = nullptr;
-        double* d_tau = nullptr;
-        double* d_U = nullptr;
-        double* d_mmw = nullptr;
-        double* d_X_spc = nullptr;
-        double* d_Z_spc = nullptr;
+        double* d_payload_i = nullptr;
+        double* d_payload_o = nullptr;
     };
 }

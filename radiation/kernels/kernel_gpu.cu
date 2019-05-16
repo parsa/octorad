@@ -16,7 +16,16 @@
 #include "device_launch_parameters.h"
 #include "kernel_gpu.hpp"
 
+template <typename T>
+__device__ __host__ constexpr inline T cube(T const& val)
+{
+    return val * val * val;
+}
+
 constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
+constexpr std::size_t GRID_ARRAY_SIZE = cube(RAD_GRID_I);
+constexpr std::size_t PAYLOAD_I_SIZE = 4 * GRID_ARRAY_SIZE;
+constexpr std::size_t PAYLOAD_O_SIZE = (5 + NRF) * GRID_ARRAY_SIZE;
 
 struct space_vector
 {
@@ -139,12 +148,6 @@ template <typename T>
 __device__ inline T sqr(T const& val)
 {
     return val * val;
-}
-
-template <typename T>
-__device__ __host__ inline T cube(T const& val)
-{
-    return val * val * val;
 }
 
 __device__ inline double ztwd_enthalpy(
@@ -337,20 +340,24 @@ __global__ void __launch_bounds__(512, 1)
         std::int64_t const d,
         std::size_t const grid_i_size,
         std::size_t const Ui_size,
-        double const* const rho,
-        double* const sx,
-        double* const sy,
-        double* const sz,
-        double* const egas,
-        double* const tau,
         double const fgamma,
-        double* const U,
-        double const* const mmw,
-        double const* const X_spc,
-        double const* const Z_spc,
         double const dt,
-        double const clightinv)
+        double const clightinv,
+        double const* const payload_i,
+        double* const payload_o)
 {
+    double const* const rho = payload_i;
+    double const* const X_spc = payload_i + (GRID_ARRAY_SIZE);
+    double const* const Z_spc = payload_i + (2 * GRID_ARRAY_SIZE);
+    double const* const mmw = payload_i + (3 * GRID_ARRAY_SIZE);
+
+    double* const sx = payload_o;
+    double* const sy = payload_o + (GRID_ARRAY_SIZE);
+    double* const sz = payload_o + (2 * GRID_ARRAY_SIZE);
+    double* const egas = payload_o + (3 * GRID_ARRAY_SIZE);
+    double* const tau = payload_o + (4 * GRID_ARRAY_SIZE);
+    double* const U = payload_o + (5 * GRID_ARRAY_SIZE);
+
     std::int64_t const i = threadIdx.x;
     std::int64_t const j = threadIdx.y;
     std::int64_t const k = threadIdx.z;
@@ -451,45 +458,21 @@ namespace octotiger {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
-      : d_rho(device_alloc<double>(sizeof(double) * count))
-      , d_sx(device_alloc<double>(sizeof(double) * count))
-      , d_sy(device_alloc<double>(sizeof(double) * count))
-      , d_sz(device_alloc<double>(sizeof(double) * count))
-      , d_egas(device_alloc<double>(sizeof(double) * count))
-      , d_tau(device_alloc<double>(sizeof(double) * count))
-      , d_U(device_alloc<double>(sizeof(double) * count * NRF))
-      , d_mmw(device_alloc<double>(sizeof(double) * count))
-      , d_X_spc(device_alloc<double>(sizeof(double) * count))
-      , d_Z_spc(device_alloc<double>(sizeof(double) * count))
+      : d_payload_i(device_alloc<double>(PAYLOAD_I_SIZE * sizeof(double)))
+      , d_payload_o(device_alloc<double>(PAYLOAD_O_SIZE * sizeof(double)))
     {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
-        std::swap(d_rho, other.d_rho);
-        std::swap(d_sx, other.d_sx);
-        std::swap(d_sy, other.d_sy);
-        std::swap(d_sz, other.d_sz);
-        std::swap(d_egas, other.d_egas);
-        std::swap(d_tau, other.d_tau);
-        std::swap(d_U, other.d_U);
-        std::swap(d_mmw, other.d_mmw);
-        std::swap(d_X_spc, other.d_X_spc);
-        std::swap(d_Z_spc, other.d_Z_spc);
+        std::swap(d_payload_i, other.d_payload_i);
+        std::swap(d_payload_o, other.d_payload_o);
     }
 
     radiation_gpu_kernel::~radiation_gpu_kernel()
     {
-        device_free(d_rho);
-        device_free(d_sx);
-        device_free(d_sy);
-        device_free(d_sz);
-        device_free(d_egas);
-        device_free(d_tau);
-        device_free(d_U);
-        device_free(d_mmw);
-        device_free(d_X_spc);
-        device_free(d_Z_spc);
+        device_free(d_payload_i);
+        device_free(d_payload_o);
     }
 
     void radiation_gpu_kernel::operator()(std::int64_t const opts_eos,
@@ -519,18 +502,23 @@ namespace octotiger {
         double const dt,
         double const clightinv)
     {
-        using pinned_vector = std::vector<double, cuda_host_allocator<double>>;
-        std::size_t const grid_array_size = cube(RAD_GRID_I);
-        pinned_vector h_rho(grid_array_size);
-        pinned_vector h_sx(grid_array_size);
-        pinned_vector h_sy(grid_array_size);
-        pinned_vector h_sz(grid_array_size);
-        pinned_vector h_egas(grid_array_size);
-        pinned_vector h_tau(grid_array_size);
-        pinned_vector h_U(NRF * grid_array_size);
-        pinned_vector h_mmw(grid_array_size);
-        pinned_vector h_X_spc(grid_array_size);
-        pinned_vector h_Z_spc(grid_array_size);
+        // batch small transfers into a single transfer to reduce memcpy overhead
+        double* h_payload_i =
+            host_pinned_alloc<double>(PAYLOAD_I_SIZE * sizeof(double));
+        double* h_payload_o =
+            host_pinned_alloc<double>(PAYLOAD_O_SIZE * sizeof(double));
+
+        double* h_rho = h_payload_i;
+        double* h_X_spc = h_payload_i + (GRID_ARRAY_SIZE);
+        double* h_Z_spc = h_payload_i + (2 * GRID_ARRAY_SIZE);
+        double* h_mmw = h_payload_i + (3 * GRID_ARRAY_SIZE);
+
+        double* h_sx = h_payload_o;
+        double* h_sy = h_payload_o + (GRID_ARRAY_SIZE);
+        double* h_sz = h_payload_o + (2 * GRID_ARRAY_SIZE);
+        double* h_egas = h_payload_o + (3 * GRID_ARRAY_SIZE);
+        double* h_tau = h_payload_o + (4 * GRID_ARRAY_SIZE);
+        double* h_U = h_payload_o + (5 * GRID_ARRAY_SIZE);
 
         {
             std::size_t index_counter{};
@@ -549,7 +537,7 @@ namespace octotiger {
                         h_tau[index_counter] = tau[iiih];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            h_U[l * grid_array_size + index_counter] =
+                            h_U[l * GRID_ARRAY_SIZE + index_counter] =
                                 U[l][iiih];
                         }
                         h_mmw[index_counter] = mmw[iiih];
@@ -562,16 +550,10 @@ namespace octotiger {
             }
         }
 
-        device_copy_from_host(d_rho, h_rho);
-        device_copy_from_host(d_sx, h_sx);
-        device_copy_from_host(d_sy, h_sy);
-        device_copy_from_host(d_sz, h_sz);
-        device_copy_from_host(d_egas, h_egas);
-        device_copy_from_host(d_tau, h_tau);
-        device_copy_from_host(d_U, h_U);
-        device_copy_from_host(d_mmw, h_mmw);
-        device_copy_from_host(d_X_spc, h_X_spc);
-        device_copy_from_host(d_Z_spc, h_Z_spc);
+        // can get rid of the input arrays
+        host_pinned_free(h_payload_i);
+        device_copy_from_host(d_payload_o, h_payload_o, PAYLOAD_I_SIZE);
+        device_copy_from_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
 
         // launch the kernel
         launch_kernel(radiation_impl, 1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,
@@ -588,28 +570,15 @@ namespace octotiger {
             fz_i,
             d,
             RAD_GRID_I,
-            grid_array_size,
-            d_rho,
-            d_sx,
-            d_sy,
-            d_sz,
-            d_egas,
-            d_tau,
+            GRID_ARRAY_SIZE,
             fgamma,
-            d_U,
-            d_mmw,
-            d_X_spc,
-            d_Z_spc,
             dt,
-            clightinv
+            clightinv,
+            d_payload_i,
+            d_payload_o
             );
 
-        device_copy_to_host(d_sx, h_sx);
-        device_copy_to_host(d_sy, h_sy);
-        device_copy_to_host(d_sz, h_sz);
-        device_copy_to_host(d_egas, h_egas);
-        device_copy_to_host(d_tau, h_tau);
-        device_copy_to_host(d_U, h_U);
+        device_copy_to_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
 
         {
             std::size_t index_counter{};
@@ -627,7 +596,7 @@ namespace octotiger {
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
                             U[l][iiih] =
-                                h_U[l * grid_array_size + index_counter];
+                                h_U[l * GRID_ARRAY_SIZE + index_counter];
                         }
 
                         ++index_counter;
@@ -635,5 +604,6 @@ namespace octotiger {
                 }
             }
         }
+        host_pinned_free(h_payload_o);
     }
 }

@@ -81,6 +81,20 @@ target_link_libraries(case_loader PUBLIC global_config)
 set_property(TARGET case_loader PROPERTY FOLDER "Octo-tiger/Helpers")
 
 ###############################################################################
+# single case test application
+###############################################################################
+if(OCTORAD_WITH_CUDA)
+    add_executable(single_case_test
+        tests/single_case_test.cu
+        config.hpp
+        utils/util.hpp
+        kernels/kernel_gpu.hpp
+    )
+    target_link_libraries(single_case_test PRIVATE
+        kernel_gpu case_loader)
+endif()
+
+###############################################################################
 # kernel fidelity test application
 ###############################################################################
 add_executable(fidelity_test
@@ -129,7 +143,7 @@ target_link_libraries(arg_array_sizes_test PRIVATE case_loader)
 # IDE settings
 ###############################################################################
 set_property(
-    TARGET fidelity_test profile_test arg_array_sizes_test
+    TARGET fidelity_test profile_test arg_array_sizes_test single_case_test
     PROPERTY FOLDER "Octo-tiger/Tests"
 )
 
