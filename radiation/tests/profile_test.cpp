@@ -23,8 +23,8 @@ constexpr std::size_t LOAD_CASE_COUNT = 100;
 template <typename K>
 struct case_checker
 {
-    case_checker(std::size_t data_size)
-      : kernel(data_size)
+    case_checker()
+      : kernel()
     {
     }
     case_checker(case_checker const& other) = delete;
@@ -93,7 +93,7 @@ double run_kernel(
     {
         scoped_timer<double> timer(overall_et);
         std::printf("***** %s *****\n", title.c_str());
-        case_checker<K> run_cpu_case(test_cases[0].data_size);
+        case_checker<K> run_cpu_case;
         for (auto& test_case : test_cases)
         {
             pure_et += run_cpu_case(test_case);

@@ -31,10 +31,10 @@ bool check_run_result(octotiger::fx_case test_case, K& kernel)
 
 struct case_checker
 {
-    case_checker(std::size_t data_size)
-      : cpu_kernel(data_size)
-      , v2_kernel(data_size)
-      , gpu_kernel(data_size)
+    case_checker()
+      : cpu_kernel()
+      , v2_kernel()
+      , gpu_kernel()
     {
     }
     case_checker(case_checker const& other) = delete;
@@ -88,8 +88,7 @@ int main()
 {
     try
     {
-        octotiger::fx_case const case0 = octotiger::import_case(0);
-        case_checker check_case(case0.data_size);
+        case_checker check_case;
         //check_case(78);
         for (std::size_t i = 0; i < CASE_COUNT / 100; ++i)
         {

@@ -12,7 +12,7 @@ namespace octotiger {
 
     struct radiation_gpu_kernel
     {
-        radiation_gpu_kernel(std::size_t count);
+        radiation_gpu_kernel();
         radiation_gpu_kernel(radiation_gpu_kernel const&) = delete;
         radiation_gpu_kernel(radiation_gpu_kernel&& other);
         ~radiation_gpu_kernel();

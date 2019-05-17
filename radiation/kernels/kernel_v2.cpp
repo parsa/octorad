@@ -358,7 +358,7 @@ namespace octotiger {
             }
         }
     }
-    radiation_v2_kernel::radiation_v2_kernel(std::size_t count) {}
+    radiation_v2_kernel::radiation_v2_kernel() {}
     radiation_v2_kernel::radiation_v2_kernel(radiation_v2_kernel&&) {}
     void radiation_v2_kernel::operator()(std::int64_t const opts_eos,
         std::int64_t const opts_problem, double const opts_dual_energy_sw1,

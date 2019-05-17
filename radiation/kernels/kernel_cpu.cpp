@@ -408,7 +408,7 @@ namespace octotiger {
         }
     }
 
-    radiation_cpu_kernel::radiation_cpu_kernel(std::size_t count) {}
+    radiation_cpu_kernel::radiation_cpu_kernel() {}
 
     radiation_cpu_kernel::radiation_cpu_kernel(radiation_cpu_kernel&&) {}
 

@@ -11,14 +11,11 @@
 
 #define VERIFY_OUTCOMES 0
 
-constexpr std::size_t CASE_COUNT = OCTORAD_DUMP_COUNT;
-constexpr std::size_t LOAD_CASE_COUNT = 100;
-
 template <typename K>
 struct case_checker
 {
-    case_checker(std::size_t data_size)
-      : kernel(data_size)
+    case_checker()
+      : kernel()
     {
     }
     case_checker(case_checker const& other) = delete;
@@ -39,11 +36,11 @@ struct case_checker
         if (verify_outcome)
         {
             bool const success =
-                are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-                are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-                are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-                are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-                are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+                are_ranges_same(a.egas, test_case.outs.egas, "egas") &&
+                are_ranges_same(a.sx, test_case.outs.sx, "sx") &&
+                are_ranges_same(a.sy, test_case.outs.sy, "sy") &&
+                are_ranges_same(a.sz, test_case.outs.sz, "sz") &&
+                are_ranges_same(a.U, test_case.outs.U, "U");
             if (!success)
             {
                 throw octotiger::formatted_exception(
@@ -68,8 +65,7 @@ int main()
         octotiger::fx_case test_case = octotiger::import_case(83);
 
         std::printf("***** gpu kernel (ported code) *****\n");
-        case_checker<octotiger::radiation_gpu_kernel> run_cpu_case(
-            test_case.data_size);
+        case_checker<octotiger::radiation_gpu_kernel> run_cpu_case;
         run_cpu_case(test_case);
     }
     catch (std::exception const& e)

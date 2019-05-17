@@ -10,7 +10,7 @@
 namespace octotiger {
     struct radiation_v2_kernel
     {
-        radiation_v2_kernel(std::size_t count);
+        radiation_v2_kernel();
         radiation_v2_kernel(radiation_v2_kernel const&) = delete;
         radiation_v2_kernel(radiation_v2_kernel&&);
         void operator()(std::int64_t const opts_eos,

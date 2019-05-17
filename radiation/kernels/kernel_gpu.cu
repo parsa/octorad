@@ -26,6 +26,7 @@ constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
 constexpr std::size_t GRID_ARRAY_SIZE = cube(RAD_GRID_I);
 constexpr std::size_t PAYLOAD_I_SIZE = 4 * GRID_ARRAY_SIZE;
 constexpr std::size_t PAYLOAD_O_SIZE = (5 + NRF) * GRID_ARRAY_SIZE;
+constexpr std::size_t PAYLOAD_SIZE = PAYLOAD_O_SIZE + PAYLOAD_I_SIZE;
 
 struct payload_t
 {
@@ -477,11 +478,11 @@ namespace octotiger {
         cudaFree(0);
     }
 
-    radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
-      : d_payload(device_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE))
+    radiation_gpu_kernel::radiation_gpu_kernel()
+      : d_payload(device_alloc<double>(PAYLOAD_SIZE))
       // batch small transfers into a single transfer to reduce memcpy overhead
       , h_payload_ptr(
-            host_pinned_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE))
+            host_pinned_alloc<double>(PAYLOAD_SIZE))
     {
     }
 
@@ -557,7 +558,7 @@ namespace octotiger {
         }
 
         device_copy_from_host(
-            d_payload, h_payload_ptr, PAYLOAD_O_SIZE + PAYLOAD_I_SIZE);
+            d_payload, h_payload_ptr, PAYLOAD_SIZE);
 
         // launch the kernel
         launch_kernel(radiation_impl, 1,
