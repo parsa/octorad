@@ -479,17 +479,22 @@ namespace octotiger {
 
     radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
       : d_payload(device_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE))
+      // batch small transfers into a single transfer to reduce memcpy overhead
+      , h_payload_ptr(
+            host_pinned_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE))
     {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
         std::swap(d_payload, other.d_payload);
+        std::swap(h_payload_ptr, other.h_payload_ptr);
     }
 
     radiation_gpu_kernel::~radiation_gpu_kernel()
     {
         device_free(d_payload);
+        host_pinned_free(h_payload_ptr);
     }
 
     void radiation_gpu_kernel::operator()(std::int64_t const opts_eos,
@@ -519,9 +524,6 @@ namespace octotiger {
         double const dt,
         double const clightinv)
     {
-        // batch small transfers into a single transfer to reduce memcpy overhead
-        double* const h_payload_ptr =
-            host_pinned_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE);
         payload_t h_payload(h_payload_ptr);
 
         {
@@ -607,6 +609,5 @@ namespace octotiger {
                 }
             }
         }
-        host_pinned_free(h_payload_ptr);
     }
 }
