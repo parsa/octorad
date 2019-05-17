@@ -21,11 +21,11 @@ bool check_run_result(octotiger::fx_case test_case, K& kernel)
         a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt, a.clightinv);
 
     bool result =
-        octotiger::are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-        octotiger::are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-        octotiger::are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-        octotiger::are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-        octotiger::are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+        octotiger::are_ranges_same(a.egas, test_case.outs.egas, "egas") &&
+        octotiger::are_ranges_same(a.sx, test_case.outs.sx, "sx") &&
+        octotiger::are_ranges_same(a.sy, test_case.outs.sy, "sy") &&
+        octotiger::are_ranges_same(a.sz, test_case.outs.sz, "sz") &&
+        octotiger::are_ranges_same(a.U, test_case.outs.U, "U");
     return result;
 }
 

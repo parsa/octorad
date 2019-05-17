@@ -45,11 +45,11 @@ struct case_checker
         if (verify_outcome)
         {
             bool const success =
-                are_ranges_same(test_case.args.egas, test_case.outs.egas, "egas") &&
-                are_ranges_same(test_case.args.sx, test_case.outs.sx, "sx") &&
-                are_ranges_same(test_case.args.sy, test_case.outs.sy, "sy") &&
-                are_ranges_same(test_case.args.sz, test_case.outs.sz, "sz") &&
-                are_ranges_same(test_case.args.U, test_case.outs.U, "U");
+                are_ranges_same(a.egas, test_case.outs.egas, "egas") &&
+                are_ranges_same(a.sx, test_case.outs.sx, "sx") &&
+                are_ranges_same(a.sy, test_case.outs.sy, "sy") &&
+                are_ranges_same(a.sz, test_case.outs.sz, "sz") &&
+                are_ranges_same(a.U, test_case.outs.U, "U");
             if (!success)
             {
                 throw octotiger::formatted_exception(

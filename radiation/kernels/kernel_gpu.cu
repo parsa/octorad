@@ -371,10 +371,10 @@ __global__ void __launch_bounds__(512, 1)
     double vz = sz[iiih] * deninv;
 
     // Compute e0 from dual energy formalism
-    double e0 = egas[iiih]
-       - 0.5 * vx * vx * den
-       - 0.5 * vy * vy * den
-       - 0.5 * vz * vz * den;
+    double e0 = egas[iiih]       //
+        - 0.5 * vx * vx * den    //
+        - 0.5 * vy * vy * den    //
+        - 0.5 * vz * vz * den;
     if (opts_eos == eos_wd)
     {
         e0 -= ztwd_energy(physcon_A, physcon_B, den);
@@ -384,9 +384,9 @@ __global__ void __launch_bounds__(512, 1)
         e0 = pow(tau[iiih], fgamma);
     }
     double E0 = e_ij(U, Ui_size, er_i, iiir);
-    space_vector F0 = make_space_vector(
-        e_ij(U, Ui_size, fx_i, iiir),
-        e_ij(U, Ui_size, fy_i, iiir),
+    space_vector F0 = make_space_vector(    //
+        e_ij(U, Ui_size, fx_i, iiir),       //
+        e_ij(U, Ui_size, fy_i, iiir),       //
         e_ij(U, Ui_size, fz_i, iiir));
     space_vector u0 = make_space_vector(vx, vy, vz);
     double E1 = E0;
@@ -413,10 +413,10 @@ __global__ void __launch_bounds__(512, 1)
     sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
 
     // Find tau with dual energy formalism
-    double e = egas[iiih]
-      - 0.5 * sx[iiih] * sx[iiih] * deninv
-      - 0.5 * sy[iiih] * sy[iiih] * deninv
-      - 0.5 * sz[iiih] * sz[iiih] * deninv;
+    double e = egas[iiih]                       //
+        - 0.5 * sx[iiih] * sx[iiih] * deninv    //
+        - 0.5 * sy[iiih] * sy[iiih] * deninv    //
+        - 0.5 * sz[iiih] * sz[iiih] * deninv;
     if (opts_eos == eos_wd)
     {
         e -= ztwd_energy(physcon_A, physcon_B, den);
@@ -556,27 +556,28 @@ namespace octotiger {
         device_copy_from_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
 
         // launch the kernel
-        launch_kernel(radiation_impl, 1, dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,
-            opts_eos,
-            opts_problem,
-            opts_dual_energy_sw1,
-            opts_dual_energy_sw2,
-            physcon_A,
-            physcon_B,
-            physcon_c,
-            er_i,
-            fx_i,
-            fy_i,
-            fz_i,
-            d,
-            RAD_GRID_I,
-            GRID_ARRAY_SIZE,
-            fgamma,
-            dt,
-            clightinv,
-            d_payload_i,
-            d_payload_o
-            );
+        launch_kernel(radiation_impl, 1,
+            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,    //
+            opts_eos,                                       //
+            opts_problem,                                   //
+            opts_dual_energy_sw1,                           //
+            opts_dual_energy_sw2,                           //
+            physcon_A,                                      //
+            physcon_B,                                      //
+            physcon_c,                                      //
+            er_i,                                           //
+            fx_i,                                           //
+            fy_i,                                           //
+            fz_i,                                           //
+            d,                                              //
+            RAD_GRID_I,                                     //
+            GRID_ARRAY_SIZE,                                //
+            fgamma,                                         //
+            dt,                                             //
+            clightinv,                                      //
+            d_payload_i,                                    //
+            d_payload_o                                     //
+        );
 
         device_copy_to_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
 
