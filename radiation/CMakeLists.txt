@@ -129,10 +129,10 @@ target_link_libraries(fidelity_test PRIVATE case_loader kernel_cpu kernel_v2)
 set_target_properties(fidelity_test PROPERTIES FOLDER "Octo-tiger/Tests/Integration")
 
 ###############################################################################
-# kernel profile application
+# compare kernel profile application
 ###############################################################################
-add_executable(profile_test
-    tests/profile_test.cpp
+add_executable(compare_test
+    tests/compare_test.cpp
     config.hpp
     utils/util.hpp
     utils/scoped_timer.hpp
@@ -141,11 +141,44 @@ add_executable(profile_test
     kernels/kernel_gpu.hpp
 )
 if(OCTORAD_WITH_CUDA)
-    # link with the kernel
-    target_link_libraries(profile_test PRIVATE kernel_gpu)
+    target_link_libraries(compare_test PRIVATE case_loader kernel_gpu)
 endif()
-target_link_libraries(profile_test PRIVATE case_loader kernel_cpu kernel_v2)
-set_target_properties(profile_test PROPERTIES FOLDER "Octo-tiger/Tests/Integration")
+target_link_libraries(compare_test PRIVATE case_loader kernel_cpu kernel_v2)
+set_target_properties(compare_test PROPERTIES FOLDER "Octo-tiger/Tests/Profiling")
+
+###############################################################################
+# kernel profile (many cases) application
+###############################################################################
+if(OCTORAD_WITH_CUDA)
+    add_executable(profile_many_test
+        tests/profile_many_test.cpp
+        config.hpp
+        utils/util.hpp
+        utils/scoped_timer.hpp
+        kernels/kernel_cpu.hpp
+        kernels/kernel_v2.hpp
+        kernels/kernel_gpu.hpp
+    )
+    target_link_libraries(profile_many_test PRIVATE case_loader kernel_gpu)
+    set_target_properties(profile_many_test PROPERTIES FOLDER "Octo-tiger/Tests/Profiling")
+endif()
+
+###############################################################################
+# kernel profile case 83 application
+###############################################################################
+if(OCTORAD_WITH_CUDA)
+    add_executable(profile_83_test
+        tests/profile_83_test.cpp
+        config.hpp
+        utils/util.hpp
+        utils/scoped_timer.hpp
+        kernels/kernel_cpu.hpp
+        kernels/kernel_v2.hpp
+        kernels/kernel_gpu.hpp
+    )
+    target_link_libraries(profile_83_test PRIVATE case_loader kernel_gpu)
+    set_target_properties(profile_83_test PROPERTIES FOLDER "Octo-tiger/Tests/Profiling")
+endif()
 
 ###############################################################################
 # args array sizes test
@@ -161,4 +194,3 @@ set_target_properties(arg_array_sizes_test PROPERTIES FOLDER "Octo-tiger/Tests/D
 ###############################################################################
 # IDE settings
 ###############################################################################
-

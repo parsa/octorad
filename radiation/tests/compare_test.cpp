@@ -21,14 +21,14 @@ constexpr std::size_t CASE_COUNT = OCTORAD_DUMP_COUNT;
 constexpr std::size_t LOAD_CASE_COUNT = 100;
 
 template <typename K>
-struct case_checker
+struct case_runner
 {
-    case_checker()
+    case_runner()
       : kernel()
     {
     }
-    case_checker(case_checker const& other) = delete;
-    case_checker(case_checker&& other) = delete;
+    case_runner(case_runner const& other) = delete;
+    case_runner(case_runner&& other) = delete;
 
     void run_case_on_kernel(octotiger::fx_case test_case)
     {
@@ -93,7 +93,7 @@ double run_kernel(
     {
         scoped_timer<double> timer(overall_et);
         std::printf("***** %s *****\n", title.c_str());
-        case_checker<K> run_cpu_case;
+        case_runner<K> run_cpu_case;
         for (auto& test_case : test_cases)
         {
             pure_et += run_cpu_case(test_case);
