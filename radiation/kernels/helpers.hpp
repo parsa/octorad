@@ -23,7 +23,7 @@ template <typename T>
 T* device_alloc(std::size_t const size)
 {
     T* device_ptr;
-    throw_if_cuda_error(cudaMalloc((void**) &device_ptr, size));
+    throw_if_cuda_error(cudaMalloc((void**) &device_ptr, size * sizeof(T)));
     return device_ptr;
 }
 
@@ -59,7 +59,7 @@ T* device_copy_from_host(
 template <typename T, typename Allocator>
 T* device_alloc_copy_from_host(std::vector<T, Allocator> const& v)
 {
-    T* const device_ptr = device_alloc<T>(v.size() * sizeof(T));
+    T* const device_ptr = device_alloc<T>(v.size());
     device_copy_from_host<T>(device_ptr, v);
     return device_ptr;
 }
@@ -67,7 +67,7 @@ T* device_alloc_copy_from_host(std::vector<T, Allocator> const& v)
 template <typename T, typename Allocator, std::size_t N>
 T* device_alloc_copy_from_host(std::array<std::vector<T, Allocator>, N> const& a)
 {
-    T* const device_ptr = device_alloc<T>(N * a[0].size() * sizeof(T));
+    T* const device_ptr = device_alloc<T>(N * a[0].size());
     device_copy_from_host<T, N>(device_ptr, a);
     return device_ptr;
 }
@@ -109,8 +109,8 @@ T* host_pinned_alloc(std::size_t const size)
 {
     // cudaMemAttachGlobal: Memory can be accessed by any stream on any device
     T* device_ptr;
-    throw_if_cuda_error(
-        cudaMallocHost((void**) &device_ptr, size, cudaMemAttachGlobal));
+    throw_if_cuda_error(cudaMallocHost(
+        (void**) &device_ptr, size * sizeof(T), cudaMemAttachGlobal));
     return device_ptr;
 }
 

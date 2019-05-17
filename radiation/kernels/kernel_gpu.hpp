@@ -32,7 +32,6 @@ namespace octotiger {
             double const clightinv);
 
     private:
-        double* d_payload_i = nullptr;
-        double* d_payload_o = nullptr;
+        double* d_payload = nullptr;
     };
 }

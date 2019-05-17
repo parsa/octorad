@@ -27,6 +27,37 @@ constexpr std::size_t GRID_ARRAY_SIZE = cube(RAD_GRID_I);
 constexpr std::size_t PAYLOAD_I_SIZE = 4 * GRID_ARRAY_SIZE;
 constexpr std::size_t PAYLOAD_O_SIZE = (5 + NRF) * GRID_ARRAY_SIZE;
 
+struct payload_t
+{
+    __device__ __host__ payload_t(double* const payload)
+      : start(payload)
+      , sx(payload + 0 * GRID_ARRAY_SIZE)
+      , sy(payload + 1 * GRID_ARRAY_SIZE)
+      , sz(payload + 2 * GRID_ARRAY_SIZE)
+      , egas(payload + 3 * GRID_ARRAY_SIZE)
+      , tau(payload + 4 * GRID_ARRAY_SIZE)
+      , U(payload + 5 * GRID_ARRAY_SIZE)
+      , rho(payload + (5 + NRF) * GRID_ARRAY_SIZE)
+      , X_spc(payload + (6 + NRF) * GRID_ARRAY_SIZE)
+      , Z_spc(payload + (7 + NRF) * GRID_ARRAY_SIZE)
+      , mmw(payload + (8 + NRF) * GRID_ARRAY_SIZE)
+    {
+    }
+    double* const start;
+    // 6 output arrays
+    double* const sx;
+    double* const sy;
+    double* const sz;
+    double* const egas;
+    double* const tau;
+    double* const U;
+    // 4 input arrays
+    double* const rho;
+    double* const X_spc;
+    double* const Z_spc;
+    double* const mmw;
+};
+
 struct space_vector
 {
     explicit space_vector() = default;
@@ -343,20 +374,9 @@ __global__ void __launch_bounds__(512, 1)
         double const fgamma,
         double const dt,
         double const clightinv,
-        double const* const payload_i,
-        double* const payload_o)
+        double* const payload)
 {
-    double const* const rho = payload_i;
-    double const* const X_spc = payload_i + (GRID_ARRAY_SIZE);
-    double const* const Z_spc = payload_i + (2 * GRID_ARRAY_SIZE);
-    double const* const mmw = payload_i + (3 * GRID_ARRAY_SIZE);
-
-    double* const sx = payload_o;
-    double* const sy = payload_o + (GRID_ARRAY_SIZE);
-    double* const sz = payload_o + (2 * GRID_ARRAY_SIZE);
-    double* const egas = payload_o + (3 * GRID_ARRAY_SIZE);
-    double* const tau = payload_o + (4 * GRID_ARRAY_SIZE);
-    double* const U = payload_o + (5 * GRID_ARRAY_SIZE);
+    payload_t p(payload);
 
     std::int64_t const i = threadIdx.x;
     std::int64_t const j = threadIdx.y;
@@ -364,14 +384,14 @@ __global__ void __launch_bounds__(512, 1)
 
     std::int64_t const iiih = (i * grid_i_size + j) * grid_i_size + k;
     std::int64_t const iiir = (i * grid_i_size + j) * grid_i_size + k;
-    double const den = rho[iiih];
+    double const den = p.rho[iiih];
     double const deninv = INVERSE(den);
-    double vx = sx[iiih] * deninv;
-    double vy = sy[iiih] * deninv;
-    double vz = sz[iiih] * deninv;
+    double vx = p.sx[iiih] * deninv;
+    double vy = p.sy[iiih] * deninv;
+    double vz = p.sz[iiih] * deninv;
 
     // Compute e0 from dual energy formalism
-    double e0 = egas[iiih]       //
+    double e0 = p.egas[iiih]     //
         - 0.5 * vx * vx * den    //
         - 0.5 * vy * vy * den    //
         - 0.5 * vz * vz * den;
@@ -379,15 +399,15 @@ __global__ void __launch_bounds__(512, 1)
     {
         e0 -= ztwd_energy(physcon_A, physcon_B, den);
     }
-    if (e0 < egas[iiih] * opts_dual_energy_sw2)
+    if (e0 < p.egas[iiih] * opts_dual_energy_sw2)
     {
-        e0 = pow(tau[iiih], fgamma);
+        e0 = pow(p.tau[iiih], fgamma);
     }
-    double E0 = e_ij(U, Ui_size, er_i, iiir);
+    double E0 = e_ij(p.U, Ui_size, er_i, iiir);
     space_vector F0 = make_space_vector(    //
-        e_ij(U, Ui_size, fx_i, iiir),       //
-        e_ij(U, Ui_size, fy_i, iiir),       //
-        e_ij(U, Ui_size, fz_i, iiir));
+        e_ij(p.U, Ui_size, fx_i, iiir),     //
+        e_ij(p.U, Ui_size, fy_i, iiir),     //
+        e_ij(p.U, Ui_size, fz_i, iiir));
     space_vector u0 = make_space_vector(vx, vy, vz);
     double E1 = E0;
     space_vector F1 = F0;
@@ -395,59 +415,59 @@ __global__ void __launch_bounds__(512, 1)
     double e1 = e0;
 
     auto const ddt = implicit_radiation_step(opts_problem, physcon_c, E1, e1,
-        F1, u1, den, mmw[iiir], X_spc[iiir], Z_spc[iiir], dt);
+        F1, u1, den, p.mmw[iiir], p.X_spc[iiir], p.Z_spc[iiir], dt);
     double const dE_dt = ddt.first;
     double const dFx_dt = ddt.second[0];
     double const dFy_dt = ddt.second[1];
     double const dFz_dt = ddt.second[2];
 
     // Accumulate derivatives
-    e_ij(U, Ui_size, er_i, iiir) += dE_dt * dt;
-    e_ij(U, Ui_size, fx_i, iiir) += dFx_dt * dt;
-    e_ij(U, Ui_size, fy_i, iiir) += dFy_dt * dt;
-    e_ij(U, Ui_size, fz_i, iiir) += dFz_dt * dt;
+    e_ij(p.U, Ui_size, er_i, iiir) += dE_dt * dt;
+    e_ij(p.U, Ui_size, fx_i, iiir) += dFx_dt * dt;
+    e_ij(p.U, Ui_size, fy_i, iiir) += dFy_dt * dt;
+    e_ij(p.U, Ui_size, fz_i, iiir) += dFz_dt * dt;
 
-    egas[iiih] -= dE_dt * dt;
-    sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
-    sy[iiih] -= dFy_dt * dt * clightinv * clightinv;
-    sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
+    p.egas[iiih] -= dE_dt * dt;
+    p.sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
+    p.sy[iiih] -= dFy_dt * dt * clightinv * clightinv;
+    p.sz[iiih] -= dFz_dt * dt * clightinv * clightinv;
 
     // Find tau with dual energy formalism
-    double e = egas[iiih]                       //
-        - 0.5 * sx[iiih] * sx[iiih] * deninv    //
-        - 0.5 * sy[iiih] * sy[iiih] * deninv    //
-        - 0.5 * sz[iiih] * sz[iiih] * deninv;
+    double e = p.egas[iiih]                         //
+        - 0.5 * p.sx[iiih] * p.sx[iiih] * deninv    //
+        - 0.5 * p.sy[iiih] * p.sy[iiih] * deninv    //
+        - 0.5 * p.sz[iiih] * p.sz[iiih] * deninv;
     if (opts_eos == eos_wd)
     {
         e -= ztwd_energy(physcon_A, physcon_B, den);
     }
-    if (e < opts_dual_energy_sw1 * egas[iiih])
+    if (e < opts_dual_energy_sw1 * p.egas[iiih])
     {
         e = e1;
     }
     if (opts_problem == MARSHAK)
     {
-        egas[iiih] = e;
-        sx[iiih] = sy[iiih] = sz[iiih] = 0;
+        p.egas[iiih] = e;
+        p.sx[iiih] = p.sy[iiih] = p.sz[iiih] = 0;
     }
-    if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
+    if (e_ij(p.U, Ui_size, er_i, iiir) <= 0.0)
     {
         std::printf(
-            "Er = %e %e %e %e\n", E0, E1, e_ij(U, Ui_size, er_i, iiir), dt);
+            "Er = %e %e %e %e\n", E0, E1, e_ij(p.U, Ui_size, er_i, iiir), dt);
         assert(false);
     }
     e = fmax(e, 0.0);
-    tau[iiih] = std::pow(e, INVERSE(fgamma));
-    if (e_ij(U, Ui_size, er_i, iiir) <= 0.0)
+    p.tau[iiih] = std::pow(e, INVERSE(fgamma));
+    if (e_ij(p.U, Ui_size, er_i, iiir) <= 0.0)
     {
-        std::printf("2231242!!! %e %e %e \n", E0, e_ij(U, Ui_size, er_i, iiir),
-            dE_dt * dt);
+        std::printf("2231242!!! %e %e %e \n", E0,
+            e_ij(p.U, Ui_size, er_i, iiir), dE_dt * dt);
         assert(false);
     }
     if (opts_problem == MARSHAK)
     {
-        sx[iiih] = sy[iiih] = sz[iiih] = 0.0;
-        egas[iiih] = e;
+        p.sx[iiih] = p.sy[iiih] = p.sz[iiih] = 0.0;
+        p.egas[iiih] = e;
     }
 }
 
@@ -458,21 +478,18 @@ namespace octotiger {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(std::size_t count)
-      : d_payload_i(device_alloc<double>(PAYLOAD_I_SIZE * sizeof(double)))
-      , d_payload_o(device_alloc<double>(PAYLOAD_O_SIZE * sizeof(double)))
+      : d_payload(device_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE))
     {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
-        std::swap(d_payload_i, other.d_payload_i);
-        std::swap(d_payload_o, other.d_payload_o);
+        std::swap(d_payload, other.d_payload);
     }
 
     radiation_gpu_kernel::~radiation_gpu_kernel()
     {
-        device_free(d_payload_i);
-        device_free(d_payload_o);
+        device_free(d_payload);
     }
 
     void radiation_gpu_kernel::operator()(std::int64_t const opts_eos,
@@ -503,22 +520,9 @@ namespace octotiger {
         double const clightinv)
     {
         // batch small transfers into a single transfer to reduce memcpy overhead
-        double* h_payload_i =
-            host_pinned_alloc<double>(PAYLOAD_I_SIZE * sizeof(double));
-        double* h_payload_o =
-            host_pinned_alloc<double>(PAYLOAD_O_SIZE * sizeof(double));
-
-        double* h_rho = h_payload_i;
-        double* h_X_spc = h_payload_i + (GRID_ARRAY_SIZE);
-        double* h_Z_spc = h_payload_i + (2 * GRID_ARRAY_SIZE);
-        double* h_mmw = h_payload_i + (3 * GRID_ARRAY_SIZE);
-
-        double* h_sx = h_payload_o;
-        double* h_sy = h_payload_o + (GRID_ARRAY_SIZE);
-        double* h_sz = h_payload_o + (2 * GRID_ARRAY_SIZE);
-        double* h_egas = h_payload_o + (3 * GRID_ARRAY_SIZE);
-        double* h_tau = h_payload_o + (4 * GRID_ARRAY_SIZE);
-        double* h_U = h_payload_o + (5 * GRID_ARRAY_SIZE);
+        double* const h_payload_ptr =
+            host_pinned_alloc<double>(PAYLOAD_O_SIZE + PAYLOAD_I_SIZE);
+        payload_t h_payload(h_payload_ptr);
 
         {
             std::size_t index_counter{};
@@ -529,20 +533,20 @@ namespace octotiger {
                     for (std::size_t k = RAD_BW; k != RAD_NX - RAD_BW; ++k)
                     {
                         std::size_t const iiih = hindex(i + d, j + d, k + d);
-                        h_rho[index_counter] = rho[iiih];
-                        h_sx[index_counter] = sx[iiih];
-                        h_sy[index_counter] = sy[iiih];
-                        h_sz[index_counter] = sz[iiih];
-                        h_egas[index_counter] = egas[iiih];
-                        h_tau[index_counter] = tau[iiih];
+                        h_payload.rho[index_counter] = rho[iiih];
+                        h_payload.sx[index_counter] = sx[iiih];
+                        h_payload.sy[index_counter] = sy[iiih];
+                        h_payload.sz[index_counter] = sz[iiih];
+                        h_payload.egas[index_counter] = egas[iiih];
+                        h_payload.tau[index_counter] = tau[iiih];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            h_U[l * GRID_ARRAY_SIZE + index_counter] =
+                            h_payload.U[l * GRID_ARRAY_SIZE + index_counter] =
                                 U[l][iiih];
                         }
-                        h_mmw[index_counter] = mmw[iiih];
-                        h_X_spc[index_counter] = X_spc[iiih];
-                        h_Z_spc[index_counter] = Z_spc[iiih];
+                        h_payload.mmw[index_counter] = mmw[iiih];
+                        h_payload.X_spc[index_counter] = X_spc[iiih];
+                        h_payload.Z_spc[index_counter] = Z_spc[iiih];
 
                         ++index_counter;
                     }
@@ -550,10 +554,8 @@ namespace octotiger {
             }
         }
 
-        // can get rid of the input arrays
-        host_pinned_free(h_payload_i);
-        device_copy_from_host(d_payload_o, h_payload_o, PAYLOAD_I_SIZE);
-        device_copy_from_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
+        device_copy_from_host(
+            d_payload, h_payload_ptr, PAYLOAD_O_SIZE + PAYLOAD_I_SIZE);
 
         // launch the kernel
         launch_kernel(radiation_impl, 1,
@@ -575,11 +577,10 @@ namespace octotiger {
             fgamma,                                         //
             dt,                                             //
             clightinv,                                      //
-            d_payload_i,                                    //
-            d_payload_o                                     //
+            d_payload                                       //
         );
 
-        device_copy_to_host(d_payload_o, h_payload_o, PAYLOAD_O_SIZE);
+        device_copy_to_host(d_payload, h_payload_ptr, PAYLOAD_O_SIZE);
 
         {
             std::size_t index_counter{};
@@ -590,14 +591,15 @@ namespace octotiger {
                     for (std::size_t k = RAD_BW; k < RAD_NX - RAD_BW; ++k)
                     {
                         std::size_t const iiih = hindex(i + d, j + d, k + d);
-                        sx[iiih] = h_sx[index_counter];
-                        sy[iiih] = h_sy[index_counter];
-                        sz[iiih] = h_sz[index_counter];
-                        egas[iiih] = h_egas[index_counter];
+                        sx[iiih] = h_payload.sx[index_counter];
+                        sy[iiih] = h_payload.sy[index_counter];
+                        sz[iiih] = h_payload.sz[index_counter];
+                        egas[iiih] = h_payload.egas[index_counter];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
                             U[l][iiih] =
-                                h_U[l * GRID_ARRAY_SIZE + index_counter];
+                                h_payload
+                                    .U[l * GRID_ARRAY_SIZE + index_counter];
                         }
 
                         ++index_counter;
@@ -605,6 +607,6 @@ namespace octotiger {
                 }
             }
         }
-        host_pinned_free(h_payload_o);
+        host_pinned_free(h_payload_ptr);
     }
 }
