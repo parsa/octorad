@@ -21,9 +21,9 @@ struct case_runner
 {
     double operator()(octotiger::fx_case test_case)
     {
-        double cpu_kernel_duration{};
+        duration = 0.0;
         {
-            scoped_timer<double, std::micro>{cpu_kernel_duration};
+            scoped_timer<double, std::micro>{duration};
             octotiger::fx_args& a = test_case.args;
             kernel(a.opts_eos, a.opts_problem, a.opts_dual_energy_sw1,
                 a.opts_dual_energy_sw2, a.physcon_A, a.physcon_B, a.physcon_c,
@@ -31,15 +31,16 @@ struct case_runner
                 a.egas, a.tau, a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt,
                 a.clightinv);
         }
-        return cpu_kernel_duration;
+        return duration;
     }
 
 private:
     K kernel;
+    double duration{};
 };
 
 template <typename K>
-double profile_kernel(octotiger::fx_case& test_case)
+void profile_kernel(octotiger::fx_case& test_case)
 {
     double overall_et{};
     double pure_et{};
@@ -53,34 +54,17 @@ double profile_kernel(octotiger::fx_case& test_case)
     }
     std::printf("total kernel execution time: %gus\n", pure_et);
     std::printf("overall execution time: %gs\n", overall_et);
-
-    return pure_et;
 }
 
 int main()
 {
     try
     {
-        std::printf("***** init device *****\n");
-        double dev_init_et{};
-        {
-            scoped_timer<double, std::milli> timer(dev_init_et);
-            octotiger::device_init();
-        }
-        std::printf("initialized device in %gms\n", dev_init_et);
+        octotiger::device_init();
 
-        std::printf("***** load case 83 *****\n");
-        octotiger::fx_case test_case;
-        double load_et{};
-        {
-            scoped_timer<double> timer(load_et);
+        octotiger::fx_case test_case = octotiger::import_case(83);
 
-            test_case = octotiger::import_case(83);
-        }
-        std::printf("loaded case 83 in %gs\n", load_et);
-
-        auto gpu_k_et =
-            profile_kernel<octotiger::radiation_gpu_kernel>(test_case);
+        profile_kernel<octotiger::radiation_gpu_kernel>(test_case);
     }
     catch (std::exception const& e)
     {
