@@ -23,7 +23,7 @@ using run_ret_t = std::pair<double, std::size_t>;
 template <typename K>
 struct case_runner
 {
-    case_runner(std::size_t idx = 0)
+    case_runner(std::size_t idx)
     {
         index = idx;
     }
@@ -55,39 +55,70 @@ void profile_kernel(octotiger::fx_case& test_case)
     double pure_et{};
     {
         scoped_timer<double> timer(overall_et);
-        case_runner<K> run_kernel_case;
 
-        std::vector<std::future<run_ret_t>> case_queue;
+        //// 3 kernels, each with a different stream
         std::vector<case_runner<K>> workers;
-        for (std::size_t wi = 0; wi < 3; wi++)
+        for(std::size_t wi = 0; wi < 3; ++wi)
         {
             workers.emplace_back(case_runner<K>{wi});
         }
 
-        std::size_t i = 0;
-        for (std::size_t wi = 0; wi < 3; wi++)
-        {
-            case_queue.emplace_back(std::async(std::launch::async,
-                [&]() { return run_kernel_case(test_case); }));
-            ++i;
-        }
-        while (i < ITERATIONS)
-        {
-            for (auto& t : case_queue)
-            {
-                if (std::future_status::ready ==
-                    t.wait_for(std::chrono::seconds::zero()))
-                {
-                    auto r = t.get();
-                    pure_et += r.first;
-                    t = std::async(std::launch::async, [&, i = r.second]() {
-                        return run_kernel_case(test_case);
-                    });
-                    ++i;
-                }
-            }
-        }
+        // initial 3 cases
+        std::vector<std::future<run_ret_t>> case_queue;
+        //std::size_t idx = 0;
+        //for (std::size_t wi = 0; wi < 3; wi++)
+        //{
+        //    case_queue.emplace_back(std::async(std::launch::async,
+        //        [&]() { return workers[wi](test_case); }));
+        //    ++idx;
+        //}
+        //// rest of the cases
+        //while (idx < ITERATIONS)
+        //{
+        //    for (auto& t : case_queue)
+        //    {
+        //        if (std::future_status::ready ==
+        //            t.wait_for(std::chrono::seconds::zero()))
+        //        {
+        //            auto r = t.get();
+        //            pure_et += r.first;
+        //            t = std::async(std::launch::async, [&, i = r.second]() {
+        //                return workers[i](test_case);
+        //            });
+        //            ++idx;
+        //        }
+        //    }
+        //}
 
+        auto f0 = std::async(
+            std::launch::async, [&]() { return workers[0](test_case); });
+        auto f1 = std::async(
+            std::launch::async, [&]() { return workers[1](test_case); });
+        //auto f2 = std::async(
+        //    std::launch::async, [&]() { return workers[2](test_case); });
+
+        auto ff0 = std::move(case_queue[0]);
+        auto ff1 = std::move(case_queue[1]);
+        auto ff2 = std::move(case_queue[2]);
+
+        ff0.get();
+        ff1.get();
+        ff2.get();
+
+        //for (std::size_t wi = 0; wi < 3; ++wi)
+        //{
+        //    case_queue.emplace_back(std::async(
+        //        std::launch::async, [&]() { return workers[2](test_case); }));
+        //}
+
+        //case_queue[0].get();
+        //case_queue[1].get();
+        //case_queue[2].get();
+        //pure_et += case_queue[0].get().first;
+        //pure_et += case_queue[1].get().first;
+        //pure_et += case_queue[2].get().first;
+
+        //case_runner<K> run_kernel_case;
         //for (std::size_t i = 0; i < ITERATIONS; ++i)
         //{
         //    pure_et += run_kernel_case(test_case);

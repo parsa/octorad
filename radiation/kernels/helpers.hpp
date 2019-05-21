@@ -165,7 +165,7 @@ public:
     using value_type = T;
     using pointer = T*;
     using reference = T&;
-    using const_reference = const T&;
+    using const_reference = T const&;
 
     cuda_host_allocator() {}
 

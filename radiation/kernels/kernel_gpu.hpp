@@ -10,11 +10,9 @@
 namespace octotiger {
     void device_init();
 
-    struct device_stream;
-
     struct radiation_gpu_kernel
     {
-        radiation_gpu_kernel(std::size_t strm_idx = 0);
+        radiation_gpu_kernel();
         radiation_gpu_kernel(radiation_gpu_kernel const&) = delete;
         radiation_gpu_kernel(radiation_gpu_kernel&& other);
         ~radiation_gpu_kernel();
@@ -34,8 +32,9 @@ namespace octotiger {
             double const clightinv);
 
     private:
-        double* d_payload;
-        double* h_payload_ptr;
-        device_stream stream;
+        bool moved = false;
+        double* d_payload = nullptr;
+        double* h_payload_ptr = nullptr;
+        std::size_t stream_index;
     };
 }
