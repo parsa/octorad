@@ -56,73 +56,56 @@ void profile_kernel(octotiger::fx_case& test_case)
     {
         scoped_timer<double> timer(overall_et);
 
-        //// 3 kernels, each with a different stream
+        constexpr std::size_t MAX_STREAMS = 4;
+
+        // MAX_STREAMS kernels, each with a different stream
         std::vector<case_runner<K>> workers;
-        for(std::size_t wi = 0; wi < 3; ++wi)
+        workers.reserve(MAX_STREAMS);
+        for (std::size_t wi = 0; wi < MAX_STREAMS; ++wi)
         {
             workers.emplace_back(case_runner<K>{wi});
         }
 
-        // initial 3 cases
+        // initial MAX_STREAMS cases
         std::vector<std::future<run_ret_t>> case_queue;
-        //std::size_t idx = 0;
-        //for (std::size_t wi = 0; wi < 3; wi++)
-        //{
-        //    case_queue.emplace_back(std::async(std::launch::async,
-        //        [&]() { return workers[wi](test_case); }));
-        //    ++idx;
-        //}
-        //// rest of the cases
-        //while (idx < ITERATIONS)
-        //{
-        //    for (auto& t : case_queue)
-        //    {
-        //        if (std::future_status::ready ==
-        //            t.wait_for(std::chrono::seconds::zero()))
-        //        {
-        //            auto r = t.get();
-        //            pure_et += r.first;
-        //            t = std::async(std::launch::async, [&, i = r.second]() {
-        //                return workers[i](test_case);
-        //            });
-        //            ++idx;
-        //        }
-        //    }
-        //}
+        case_queue.reserve(MAX_STREAMS);
+        for (std::size_t wi = 0; wi < MAX_STREAMS; ++wi)
+        {
+            case_queue.emplace_back(std::async(std::launch::async,
+                [&test_case, &w = workers[wi]]() { return w(test_case); }));
+        }
 
-        auto f0 = std::async(
-            std::launch::async, [&]() { return workers[0](test_case); });
-        auto f1 = std::async(
-            std::launch::async, [&]() { return workers[1](test_case); });
-        //auto f2 = std::async(
-        //    std::launch::async, [&]() { return workers[2](test_case); });
-
-        auto ff0 = std::move(case_queue[0]);
-        auto ff1 = std::move(case_queue[1]);
-        auto ff2 = std::move(case_queue[2]);
-
-        ff0.get();
-        ff1.get();
-        ff2.get();
-
-        //for (std::size_t wi = 0; wi < 3; ++wi)
-        //{
-        //    case_queue.emplace_back(std::async(
-        //        std::launch::async, [&]() { return workers[2](test_case); }));
-        //}
-
-        //case_queue[0].get();
-        //case_queue[1].get();
-        //case_queue[2].get();
-        //pure_et += case_queue[0].get().first;
-        //pure_et += case_queue[1].get().first;
-        //pure_et += case_queue[2].get().first;
-
-        //case_runner<K> run_kernel_case;
-        //for (std::size_t i = 0; i < ITERATIONS; ++i)
-        //{
-        //    pure_et += run_kernel_case(test_case);
-        //}
+        // MAX_STREAM initial values are already in the queue
+        std::size_t idx = MAX_STREAMS;
+        // rest of the cases until queue is empty
+        while (idx < ITERATIONS)
+        {
+            // give new work to slots with finished tasks
+            for (auto& t : case_queue)
+            {
+                // is future ready?
+                if (std::future_status::ready ==
+                    t.wait_for(std::chrono::seconds::zero()))
+                {
+                    // get value out of the future
+                    run_ret_t const res = t.get();
+                    pure_et += res.first;
+                    std::size_t const strm_idx = res.second;
+                    // schedule new task
+                    t = std::async(std::launch::async,
+                        [&test_case, &w = workers[strm_idx]]() {
+                            return w(test_case);
+                        });
+                    ++idx;
+                }
+            }
+        }
+        // remaining MAX_STREAMS
+        for (auto& t : case_queue)
+        {
+            run_ret_t const res = t.get();
+            pure_et += res.first;
+        }
     }
     std::printf("total kernel execution time: %gus\n", pure_et);
     std::printf("overall execution time: %gs\n", overall_et);
