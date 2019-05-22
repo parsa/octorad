@@ -16,8 +16,8 @@
 #include <utility>
 #include <vector>
 
-constexpr std::size_t ITERATIONS = 100000;
-constexpr std::size_t MAX_STREAMS = 3;
+constexpr std::size_t ITERATIONS = 20000;
+constexpr std::size_t MAX_STREAMS = 4;
 
 using run_ret_t = std::pair<double, std::size_t>;
 
@@ -119,6 +119,8 @@ int main()
         octotiger::fx_case test_case = octotiger::import_case(83);
 
         profile_kernel<octotiger::radiation_gpu_kernel>(test_case);
+
+        octotiger::device_reset();
     }
     catch (std::exception const& e)
     {

@@ -9,6 +9,7 @@
 
 namespace octotiger {
     void device_init();
+    void device_reset();
 
     struct radiation_gpu_kernel
     {

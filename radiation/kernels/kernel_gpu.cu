@@ -482,6 +482,11 @@ namespace octotiger {
         cudaFree(0);
     }
 
+    void device_reset()
+    {
+        cudaDeviceReset();
+    }
+
     radiation_gpu_kernel::radiation_gpu_kernel()
       : d_payload(device_alloc<double>(PAYLOAD_SIZE))
       // batch small transfers into a single transfer to reduce memcpy overhead
