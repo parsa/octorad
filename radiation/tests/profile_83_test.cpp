@@ -19,16 +19,10 @@
 constexpr std::size_t ITERATIONS = 20000;
 constexpr std::size_t MAX_STREAMS = 4;
 
-using run_ret_t = std::pair<double, std::size_t>;
-
 template <typename K>
 struct case_runner
 {
-    case_runner(std::size_t idx)
-    {
-        index = idx;
-    }
-    run_ret_t operator()(octotiger::fx_case test_case)
+    double operator()(octotiger::fx_case test_case)
     {
         duration = 0.0;
         {
@@ -40,13 +34,12 @@ struct case_runner
                 a.egas, a.tau, a.fgamma, a.U, a.mmw, a.X_spc, a.Z_spc, a.dt,
                 a.clightinv);
         }
-        return std::make_pair(duration, index);
+        return duration;
     }
 
 private:
     K kernel;
     double duration{};
-    std::size_t index;
 };
 
 template <typename K>
@@ -62,11 +55,11 @@ void profile_kernel(octotiger::fx_case& test_case)
         workers.reserve(MAX_STREAMS);
         for (std::size_t wi = 0; wi < MAX_STREAMS; ++wi)
         {
-            workers.emplace_back(case_runner<K>{wi});
+            workers.emplace_back(case_runner<K>{});
         }
 
         // initial MAX_STREAMS cases
-        std::vector<std::future<run_ret_t>> case_queue;
+        std::vector<std::future<double>> case_queue;
         case_queue.reserve(MAX_STREAMS);
         for (std::size_t wi = 0; wi < MAX_STREAMS; ++wi)
         {
@@ -75,35 +68,34 @@ void profile_kernel(octotiger::fx_case& test_case)
         }
 
         // MAX_STREAM initial values are already in the queue
-        std::size_t idx = MAX_STREAMS;
+        std::size_t case_queue_top = MAX_STREAMS;
         // rest of the cases until queue is empty
-        while (idx < ITERATIONS)
+        while (case_queue_top < ITERATIONS)
         {
             // give new work to slots with finished tasks
-            for (auto& t : case_queue)
+            for (std::size_t strm_idx = 0; strm_idx < case_queue.size();
+                 ++strm_idx)
             {
+                std::future<double>& f = case_queue[strm_idx];
                 // is future ready?
                 if (std::future_status::ready ==
-                    t.wait_for(std::chrono::seconds::zero()))
+                    f.wait_for(std::chrono::seconds::zero()))
                 {
                     // get value out of the future
-                    run_ret_t const res = t.get();
-                    pure_et += res.first;
-                    std::size_t const strm_idx = res.second;
+                    pure_et += f.get();
                     // schedule new task
-                    t = std::async(std::launch::async,
+                    f = std::async(std::launch::async,
                         [&test_case, &w = workers[strm_idx]]() {
                             return w(test_case);
                         });
-                    ++idx;
+                    ++case_queue_top;
                 }
             }
         }
         // remaining MAX_STREAMS
-        for (auto& t : case_queue)
+        for (std::future<double>& t : case_queue)
         {
-            run_ret_t const res = t.get();
-            pure_et += res.first;
+            pure_et += t.get();
         }
     }
     std::printf("total kernel execution time: %gus\n", pure_et);
