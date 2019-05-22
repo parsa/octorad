@@ -3,6 +3,7 @@
 #include "kernels/kernel_gpu.hpp"
 
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -27,6 +28,9 @@ constexpr std::size_t GRID_ARRAY_SIZE = cube(RAD_GRID_I);
 constexpr std::size_t PAYLOAD_I_SIZE = 4 * GRID_ARRAY_SIZE;
 constexpr std::size_t PAYLOAD_O_SIZE = (5 + NRF) * GRID_ARRAY_SIZE;
 constexpr std::size_t PAYLOAD_SIZE = PAYLOAD_O_SIZE + PAYLOAD_I_SIZE;
+
+std::atomic_size_t stream_top{};
+std::vector<cudaStream_t> streams;
 
 struct payload_t
 {
@@ -478,24 +482,38 @@ namespace octotiger {
         cudaFree(0);
     }
 
+    void device_reset()
+    {
+        cudaDeviceReset();
+    }
+
     radiation_gpu_kernel::radiation_gpu_kernel()
       : d_payload(device_alloc<double>(PAYLOAD_SIZE))
       // batch small transfers into a single transfer to reduce memcpy overhead
-      , h_payload_ptr(
-            host_pinned_alloc<double>(PAYLOAD_SIZE))
+      , h_payload_ptr(host_pinned_alloc<double>(PAYLOAD_SIZE))
     {
+        stream_index = stream_top++;
+        streams.emplace_back(cudaStream_t{});
+        assert(stream_top == streams.size());
+        cudaStreamCreate(&streams[stream_index]);
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
         std::swap(d_payload, other.d_payload);
         std::swap(h_payload_ptr, other.h_payload_ptr);
+        std::swap(stream_index, other.stream_index);
+        other.moved = true;
     }
 
     radiation_gpu_kernel::~radiation_gpu_kernel()
     {
-        device_free(d_payload);
-        host_pinned_free(h_payload_ptr);
+        if (!moved)
+        {
+            device_free(d_payload);
+            host_pinned_free(h_payload_ptr);
+            cudaStreamDestroy(streams[stream_index]);
+        }
     }
 
     void radiation_gpu_kernel::operator()(std::int64_t const opts_eos,
@@ -557,33 +575,37 @@ namespace octotiger {
             }
         }
 
-        device_copy_from_host(
-            d_payload, h_payload_ptr, PAYLOAD_SIZE);
+        device_copy_from_host_async(
+            d_payload, h_payload_ptr, PAYLOAD_SIZE, streams[stream_index]);
 
         // launch the kernel
-        launch_kernel(radiation_impl, 1,
-            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I), 0,    //
-            opts_eos,                                       //
-            opts_problem,                                   //
-            opts_dual_energy_sw1,                           //
-            opts_dual_energy_sw2,                           //
-            physcon_A,                                      //
-            physcon_B,                                      //
-            physcon_c,                                      //
-            er_i,                                           //
-            fx_i,                                           //
-            fy_i,                                           //
-            fz_i,                                           //
-            d,                                              //
-            RAD_GRID_I,                                     //
-            GRID_ARRAY_SIZE,                                //
-            fgamma,                                         //
-            dt,                                             //
-            clightinv,                                      //
-            d_payload                                       //
+        launch_kernel(radiation_impl,                    // kernel
+            dim3(1),                                     // grid dims
+            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I),    // block dims
+            streams[stream_index],                       // stream
+            opts_eos,                                    //
+            opts_problem,                                //
+            opts_dual_energy_sw1,                        //
+            opts_dual_energy_sw2,                        //
+            physcon_A,                                   //
+            physcon_B,                                   //
+            physcon_c,                                   //
+            er_i,                                        //
+            fx_i,                                        //
+            fy_i,                                        //
+            fz_i,                                        //
+            d,                                           //
+            RAD_GRID_I,                                  //
+            GRID_ARRAY_SIZE,                             //
+            fgamma,                                      //
+            dt,                                          //
+            clightinv,                                   //
+            d_payload                                    //
         );
 
-        device_copy_to_host(d_payload, h_payload_ptr, PAYLOAD_O_SIZE);
+        device_copy_to_host_async(
+            d_payload, h_payload_ptr, PAYLOAD_O_SIZE, streams[stream_index]);
+        cudaStreamSynchronize(streams[stream_index]);
 
         {
             std::size_t index_counter{};

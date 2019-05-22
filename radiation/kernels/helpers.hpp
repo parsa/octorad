@@ -28,6 +28,15 @@ T* device_alloc(std::size_t const size)
 }
 
 template <typename T>
+T* device_copy_from_host_async(T* const device_ptr, T* const payload,
+    std::size_t const payload_size, cudaStream_t stream)
+{
+    throw_if_cuda_error(cudaMemcpyAsync(device_ptr, payload,
+        payload_size * sizeof(T), cudaMemcpyHostToDevice, stream));
+    return device_ptr;
+}
+
+template <typename T>
 T* device_copy_from_host(
     T* const device_ptr, T* const payload, std::size_t const payload_size)
 {
@@ -37,7 +46,8 @@ T* device_copy_from_host(
 }
 
 template <typename T, typename Allocator>
-T* device_copy_from_host(T* const device_ptr, std::vector<T, Allocator> const& v)
+T* device_copy_from_host(
+    T* const device_ptr, std::vector<T, Allocator> const& v)
 {
     throw_if_cuda_error(cudaMemcpy(
         device_ptr, &v[0], v.size() * sizeof(T), cudaMemcpyHostToDevice));
@@ -65,11 +75,20 @@ T* device_alloc_copy_from_host(std::vector<T, Allocator> const& v)
 }
 
 template <typename T, typename Allocator, std::size_t N>
-T* device_alloc_copy_from_host(std::array<std::vector<T, Allocator>, N> const& a)
+T* device_alloc_copy_from_host(
+    std::array<std::vector<T, Allocator>, N> const& a)
 {
     T* const device_ptr = device_alloc<T>(N * a[0].size());
     device_copy_from_host<T, N>(device_ptr, a);
     return device_ptr;
+}
+
+template <typename T>
+void device_copy_to_host_async(T const* const device_ptr, T* const payload,
+    std::size_t const payload_size, cudaStream_t stream)
+{
+    throw_if_cuda_error(cudaMemcpyAsync(payload, device_ptr,
+        payload_size * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }
 
 template <typename T>
@@ -81,7 +100,8 @@ void device_copy_to_host(
 }
 
 template <typename T, typename Allocator>
-void device_copy_to_host(T const* const device_ptr, std::vector<T, Allocator>& v)
+void device_copy_to_host(
+    T const* const device_ptr, std::vector<T, Allocator>& v)
 {
     throw_if_cuda_error(cudaMemcpy(
         &v[0], device_ptr, v.size() * sizeof(T), cudaMemcpyDeviceToHost));
@@ -145,7 +165,7 @@ public:
     using value_type = T;
     using pointer = T*;
     using reference = T&;
-    using const_reference = const T&;
+    using const_reference = T const&;
 
     cuda_host_allocator() {}
 
