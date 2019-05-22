@@ -16,7 +16,8 @@
 #include <utility>
 #include <vector>
 
-constexpr std::size_t ITERATIONS = 10000;
+constexpr std::size_t ITERATIONS = 100000;
+constexpr std::size_t MAX_STREAMS = 3;
 
 using run_ret_t = std::pair<double, std::size_t>;
 
@@ -55,8 +56,6 @@ void profile_kernel(octotiger::fx_case& test_case)
     double pure_et{};
     {
         scoped_timer<double> timer(overall_et);
-
-        constexpr std::size_t MAX_STREAMS = 4;
 
         // MAX_STREAMS kernels, each with a different stream
         std::vector<case_runner<K>> workers;
