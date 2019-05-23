@@ -1,8 +1,4 @@
-#include "kernels/kernel_cpu.hpp"
-#include "kernels/kernel_v2.hpp"
-#if OCTORAD_HAVE_CUDA
 #include "kernels/kernel_gpu.hpp"
-#endif
 #include "utils/fx_case.hpp"
 #include "utils/fx_compare.hpp"
 #include "utils/scoped_timer.hpp"
@@ -24,7 +20,7 @@ struct case_runner
 {
     double operator()(octotiger::fx_case test_case)
     {
-        duration = 0.0;
+        double duration = 0.0;
         {
             scoped_timer<double, std::micro>{duration};
             octotiger::fx_args& a = test_case.args;
@@ -39,24 +35,18 @@ struct case_runner
 
 private:
     K kernel;
-    double duration{};
 };
 
 template <typename K>
 void profile_kernel(octotiger::fx_case& test_case)
 {
-    double overall_et{};
-    double pure_et{};
+    double overall_et = 0.;
+    double pure_et = 0.;
     {
         scoped_timer<double> timer(overall_et);
 
         // MAX_STREAMS kernels, each with a different stream
-        std::vector<case_runner<K>> workers;
-        workers.reserve(MAX_STREAMS);
-        for (std::size_t wi = 0; wi < MAX_STREAMS; ++wi)
-        {
-            workers.emplace_back(case_runner<K>{});
-        }
+        std::vector<case_runner<K>> workers(MAX_STREAMS);
 
         // initial MAX_STREAMS cases
         std::vector<std::future<double>> case_queue;
