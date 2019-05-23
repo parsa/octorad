@@ -558,7 +558,7 @@ namespace octotiger {
         }
 
         device_copy_from_host_async(
-            d_payload_ptr.get(), h_payload_ptr.get(), 1, streams[stream_index]);
+            d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
         launch_kernel(radiation_impl,                    // kernel
@@ -588,7 +588,7 @@ namespace octotiger {
         // only overwrite the output portion
         // outputs elements are first
         device_copy_to_host_async<output_payload_t>(
-            d_payload_ptr.get(), h_payload_ptr.get(), 1, streams[stream_index]);
+            d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
         device_stream_sync(streams[stream_index]);
 
         {

@@ -1,12 +1,10 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
 #include <memory>
 #include <sstream>
-#include <vector>
 
 #include "cuda_runtime.h"
 
@@ -39,7 +37,7 @@ T* device_alloc(std::size_t const count = 1)
 
 template <typename T>
 T* device_copy_from_host_async(T* const device_ptr, T* const payload,
-    std::size_t const count, cudaStream_t stream)
+    cudaStream_t stream, std::size_t const count = 1)
 {
     throw_if_cuda_error(cudaMemcpyAsync(device_ptr, payload, count * sizeof(T),
         cudaMemcpyHostToDevice, stream));
@@ -55,47 +53,24 @@ T* device_copy_from_host(
     return device_ptr;
 }
 
-template <typename T, typename Allocator>
+template <typename T, typename It>
 T* device_copy_from_host(
-    T* const device_ptr, std::vector<T, Allocator> const& v)
+    T* const device_ptr, It const& begin, std::size_t size)
 {
     throw_if_cuda_error(cudaMemcpy(
-        device_ptr, &v[0], v.size() * sizeof(T), cudaMemcpyHostToDevice));
+        device_ptr, begin, size * sizeof(T), cudaMemcpyHostToDevice));
     return device_ptr;
 }
-
-template <typename T, typename Allocator, std::size_t N>
-T* device_copy_from_host(
-    T* const device_ptr, std::array<std::vector<T, Allocator>, N> const& a)
+template <typename T, typename It>
+T* device_alloc_copy_from_host(It const& begin, std::size_t size)
 {
-    for (std::size_t i = 0; i < N; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(device_ptr + i * a[0].size(), &a[i][0],
-            a[i].size() * sizeof(T), cudaMemcpyHostToDevice));
-    }
+    T* const device_ptr = device_alloc<T>(size);
+    device_copy_from_host<T>(device_ptr, begin, size);
     return device_ptr;
 }
-
-template <typename T, typename Allocator>
-T* device_alloc_copy_from_host(std::vector<T, Allocator> const& v)
-{
-    T* const device_ptr = device_alloc<T>(v.size());
-    device_copy_from_host<T>(device_ptr, v);
-    return device_ptr;
-}
-
-template <typename T, typename Allocator, std::size_t N>
-T* device_alloc_copy_from_host(
-    std::array<std::vector<T, Allocator>, N> const& a)
-{
-    T* const device_ptr = device_alloc<T>(N * a[0].size());
-    device_copy_from_host<T, N>(device_ptr, a);
-    return device_ptr;
-}
-
 template <typename T>
 void device_copy_to_host_async(T const* const device_ptr, T* const payload,
-    std::size_t const count, cudaStream_t stream)
+    cudaStream_t stream, std::size_t const count = 1)
 {
     throw_if_cuda_error(cudaMemcpyAsync(payload, device_ptr, count * sizeof(T),
         cudaMemcpyDeviceToHost, stream));
@@ -109,23 +84,12 @@ void device_copy_to_host(
         payload, device_ptr, count * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
-template <typename T, typename Allocator>
+template <typename T, typename It>
 void device_copy_to_host(
-    T const* const device_ptr, std::vector<T, Allocator>& v)
+    T const* const device_ptr, It begin, std::size_t size)
 {
     throw_if_cuda_error(cudaMemcpy(
-        &v[0], device_ptr, v.size() * sizeof(T), cudaMemcpyDeviceToHost));
-}
-
-template <typename T, typename Allocator, std::size_t N>
-void device_copy_to_host(
-    T const* const device_ptr, std::array<std::vector<T, Allocator>, N>& a)
-{
-    for (std::size_t i = 0; i < N; ++i)
-    {
-        throw_if_cuda_error(cudaMemcpy(&a[i][0], device_ptr + i * a[i].size(),
-            a[i].size() * sizeof(T), cudaMemcpyDeviceToHost));
-    }
+        begin, device_ptr, size * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
 template <typename T>
