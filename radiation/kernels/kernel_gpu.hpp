@@ -20,7 +20,7 @@ namespace octotiger {
             double sz[GRID_ARRAY_SIZE];
             double egas[GRID_ARRAY_SIZE];
             double tau[GRID_ARRAY_SIZE];
-            double U[NRF * GRID_ARRAY_SIZE];
+            double U[NRF][GRID_ARRAY_SIZE];
         };
 
         struct payload_t : output_payload_t

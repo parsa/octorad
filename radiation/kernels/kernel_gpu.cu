@@ -204,12 +204,6 @@ __device__ double ztwd_energy(
         double(0));
 }
 
-__device__ inline double& e_ij(
-    double* U, std::size_t Ui_size, std::size_t i, std::size_t j)
-{
-    return U[i * Ui_size + j];
-}
-
 template <typename F>
 __device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
     F const test, double const E, double const eg_t)
@@ -376,11 +370,11 @@ __global__ void __launch_bounds__(512, 1)
     {
         e0 = pow(p.tau[iiih], fgamma);
     }
-    double E0 = e_ij(p.U, Ui_size, er_i, iiir);
+    double E0 = p.U[er_i][iiir];
     space_vector F0 = make_space_vector(    //
-        e_ij(p.U, Ui_size, fx_i, iiir),     //
-        e_ij(p.U, Ui_size, fy_i, iiir),     //
-        e_ij(p.U, Ui_size, fz_i, iiir));
+        p.U[fx_i][iiir],                    //
+        p.U[fy_i][iiir],                    //
+        p.U[fz_i][iiir]);
     space_vector u0 = make_space_vector(vx, vy, vz);
     double E1 = E0;
     space_vector F1 = F0;
@@ -395,10 +389,10 @@ __global__ void __launch_bounds__(512, 1)
     double const dFz_dt = ddt.second[2];
 
     // Accumulate derivatives
-    e_ij(p.U, Ui_size, er_i, iiir) += dE_dt * dt;
-    e_ij(p.U, Ui_size, fx_i, iiir) += dFx_dt * dt;
-    e_ij(p.U, Ui_size, fy_i, iiir) += dFy_dt * dt;
-    e_ij(p.U, Ui_size, fz_i, iiir) += dFz_dt * dt;
+    p.U[er_i][iiir] += dE_dt * dt;
+    p.U[fx_i][iiir] += dFx_dt * dt;
+    p.U[fy_i][iiir] += dFy_dt * dt;
+    p.U[fz_i][iiir] += dFz_dt * dt;
 
     p.egas[iiih] -= dE_dt * dt;
     p.sx[iiih] -= dFx_dt * dt * clightinv * clightinv;
@@ -423,18 +417,16 @@ __global__ void __launch_bounds__(512, 1)
         p.egas[iiih] = e;
         p.sx[iiih] = p.sy[iiih] = p.sz[iiih] = 0;
     }
-    if (e_ij(p.U, Ui_size, er_i, iiir) <= 0.0)
+    if (p.U[er_i][iiir] <= 0.0)
     {
-        std::printf(
-            "Er = %e %e %e %e\n", E0, E1, e_ij(p.U, Ui_size, er_i, iiir), dt);
+        std::printf("Er = %e %e %e %e\n", E0, E1, p.U[er_i][iiir], dt);
         assert(false);
     }
     e = fmax(e, 0.0);
     p.tau[iiih] = std::pow(e, INVERSE(fgamma));
-    if (e_ij(p.U, Ui_size, er_i, iiir) <= 0.0)
+    if (p.U[er_i][iiir] <= 0.0)
     {
-        std::printf("2231242!!! %e %e %e \n", E0,
-            e_ij(p.U, Ui_size, er_i, iiir), dE_dt * dt);
+        std::printf("2231242!!! %e %e %e \n", E0, p.U[er_i][iiir], dE_dt * dt);
         assert(false);
     }
     if (opts_problem == MARSHAK)
@@ -543,8 +535,7 @@ namespace octotiger {
                         h_payload.tau[index_counter] = tau[iiih];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            h_payload.U[l * GRID_ARRAY_SIZE + index_counter] =
-                                U[l][iiih];
+                            h_payload.U[l][index_counter] = U[l][iiih];
                         }
                         h_payload.rho[index_counter] = rho[iiih];
                         h_payload.X_spc[index_counter] = X_spc[iiih];
@@ -606,9 +597,7 @@ namespace octotiger {
                         egas[iiih] = h_payload.egas[index_counter];
                         for (std::size_t l = 0; l < NRF; ++l)
                         {
-                            U[l][iiih] =
-                                h_payload
-                                    .U[l * GRID_ARRAY_SIZE + index_counter];
+                            U[l][iiih] = h_payload.U[l][index_counter];
                         }
 
                         ++index_counter;
