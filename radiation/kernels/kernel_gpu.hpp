@@ -12,13 +12,6 @@ constexpr std::size_t GRID_ARRAY_SIZE = RAD_GRID_I * RAD_GRID_I * RAD_GRID_I;
 
 namespace octotiger {
     namespace detail {
-        struct input_payload_t
-        {
-            double rho[GRID_ARRAY_SIZE];
-            double X_spc[GRID_ARRAY_SIZE];
-            double Z_spc[GRID_ARRAY_SIZE];
-            double mmw[GRID_ARRAY_SIZE];
-        };
 
         struct output_payload_t
         {
@@ -30,10 +23,12 @@ namespace octotiger {
             double U[NRF * GRID_ARRAY_SIZE];
         };
 
-        struct payload_t
+        struct payload_t : output_payload_t
         {
-            output_payload_t outputs;
-            input_payload_t inputs;
+            double rho[GRID_ARRAY_SIZE];
+            double X_spc[GRID_ARRAY_SIZE];
+            double Z_spc[GRID_ARRAY_SIZE];
+            double mmw[GRID_ARRAY_SIZE];
         };
     }
 
