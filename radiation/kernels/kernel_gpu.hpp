@@ -76,6 +76,17 @@ namespace octotiger {
             double const clightinv);
 
     private:
+        void load_args(detail::payload_t& h_payload, std::int64_t const d,
+            std::vector<double>& sx, std::vector<double>& sy,
+            std::vector<double>& sz, std::vector<double>& egas,
+            std::vector<double>& tau, std::array<std::vector<double>, NRF> U,
+            std::vector<double> const& rho, std::vector<double> const X_spc,
+            std::vector<double> const Z_spc, std::vector<double> const mmw);
+        void update_outputs(detail::payload_t& h_payload,
+            std::int64_t const d, std::vector<double>& sx, std::vector<double>& sy,
+            std::vector<double>& sz, std::vector<double>& egas,
+            std::vector<double>& tau, std::array<std::vector<double>, NRF> U);
+
         bool moved = false;
         detail::device_payload_ptr d_payload_ptr;
         detail::host_payload_ptr h_payload_ptr;
