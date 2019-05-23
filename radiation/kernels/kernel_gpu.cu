@@ -589,7 +589,7 @@ namespace octotiger {
         // outputs elements are first
         device_copy_to_host_async<output_payload_t>(
             d_payload_ptr, h_payload_ptr, 1, streams[stream_index]);
-        cudaStreamSynchronize(streams[stream_index]);
+        device_stream_sync(streams[stream_index]);
 
         {
             std::size_t index_counter{};

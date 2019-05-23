@@ -163,6 +163,11 @@ void device_stream_destroy(cudaStream_t strm)
     fail_if_cuda_error(cudaStreamDestroy(strm));
 }
 
+void device_stream_sync(cudaStream_t strm)
+{
+    fail_if_cuda_error(cudaStreamSynchronize(strm));
+}
+
 template <typename F>
 void launch_kernel(F fx, dim3 grid_dim = dim3(1), dim3 block_dim = dim3(1),
     cudaStream_t default_stream = 0)
