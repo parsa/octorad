@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdio>
 #include <exception>
 #include <memory>
 #include <sstream>
@@ -19,6 +20,15 @@ inline void throw_if_cuda_error(cudaError_t err = cudaGetLastError())
     }
 }
 
+inline void fail_if_cuda_error(cudaError_t err = cudaGetLastError())
+{
+    if (err != cudaSuccess)
+    {
+        std::printf("cuda error: %s", cudaGetErrorString(err));
+        std::terminate();
+    }
+}
+
 template <typename T>
 T* device_alloc(std::size_t const count = 1)
 {
@@ -31,8 +41,8 @@ template <typename T>
 T* device_copy_from_host_async(T* const device_ptr, T* const payload,
     std::size_t const count, cudaStream_t stream)
 {
-    throw_if_cuda_error(cudaMemcpyAsync(device_ptr, payload,
-        count * sizeof(T), cudaMemcpyHostToDevice, stream));
+    throw_if_cuda_error(cudaMemcpyAsync(device_ptr, payload, count * sizeof(T),
+        cudaMemcpyHostToDevice, stream));
     return device_ptr;
 }
 
@@ -87,8 +97,8 @@ template <typename T>
 void device_copy_to_host_async(T const* const device_ptr, T* const payload,
     std::size_t const count, cudaStream_t stream)
 {
-    throw_if_cuda_error(cudaMemcpyAsync(payload, device_ptr,
-        count * sizeof(T), cudaMemcpyDeviceToHost, stream));
+    throw_if_cuda_error(cudaMemcpyAsync(payload, device_ptr, count * sizeof(T),
+        cudaMemcpyDeviceToHost, stream));
 }
 
 template <typename T>
@@ -121,7 +131,7 @@ void device_copy_to_host(
 template <typename T>
 void device_free(T const* const device_ptr)
 {
-    throw_if_cuda_error(cudaFree((void*) device_ptr));
+    fail_if_cuda_error(cudaFree((void*) device_ptr));
 }
 
 template <typename T>
@@ -137,7 +147,20 @@ T* host_pinned_alloc(std::size_t const count = 1)
 template <typename T>
 void host_pinned_free(T const* const device_ptr)
 {
-    throw_if_cuda_error(cudaFreeHost((void*) device_ptr));
+    fail_if_cuda_error(cudaFreeHost((void*) device_ptr));
+}
+
+cudaStream_t device_stream_create()
+{
+    cudaStream_t strm;
+    throw_if_cuda_error(cudaStreamCreate(&strm));
+
+    return strm;
+}
+
+void device_stream_destroy(cudaStream_t strm)
+{
+    fail_if_cuda_error(cudaStreamDestroy(strm));
 }
 
 template <typename F>

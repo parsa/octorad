@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <map>
+#include <mutex>
 #include <sstream>
 #include <vector>
 
@@ -25,12 +27,9 @@ __device__ __host__ constexpr inline T cube(T const& val)
     return val * val * val;
 }
 
-std::atomic_size_t stream_top{};
-std::vector<cudaStream_t> streams;
-
-constexpr std::size_t PAYLOAD_I_SIZE = sizeof(input_payload_t);
-constexpr std::size_t PAYLOAD_O_SIZE = sizeof(output_payload_t);
-constexpr std::size_t PAYLOAD_SIZE = sizeof(payload_t);
+std::mutex m;
+std::size_t stream_top = 0;
+std::map<std::size_t, cudaStream_t> streams;
 
 struct space_vector
 {
@@ -462,10 +461,9 @@ namespace octotiger {
       // batch small transfers into a single transfer to reduce memcpy overhead
       , h_payload_ptr(host_pinned_alloc<payload_t>())
     {
+        std::lock_guard<std::mutex> l(m);
         stream_index = stream_top++;
-        streams.emplace_back(cudaStream_t{});
-        assert(stream_top == streams.size());
-        cudaStreamCreate(&streams[stream_index]);
+        streams[stream_index] = device_stream_create();
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
@@ -493,7 +491,11 @@ namespace octotiger {
         {
             device_free(d_payload_ptr);
             host_pinned_free(h_payload_ptr);
-            cudaStreamDestroy(streams[stream_index]);
+            device_stream_destroy(streams[stream_index]);
+            {
+                std::lock_guard<std::mutex> l(m);
+                streams.erase(stream_index);
+            }
         }
     }
 
