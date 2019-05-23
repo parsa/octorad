@@ -448,12 +448,12 @@ __global__ void __launch_bounds__(512, 1)
 namespace octotiger {
     void device_init()
     {
-        cudaFree(0);
+        throw_if_cuda_error(cudaFree(0));
     }
 
     void device_reset()
     {
-        cudaDeviceReset();
+        throw_if_cuda_error(cudaDeviceReset());
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel()
