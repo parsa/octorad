@@ -470,8 +470,8 @@ namespace octotiger {
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
-        std::swap(d_payload_ptr, other.d_payload_ptr);
-        std::swap(h_payload_ptr, other.h_payload_ptr);
+        d_payload_ptr = std::move(other.d_payload_ptr);
+        h_payload_ptr = std::move(other.h_payload_ptr);
         std::swap(stream_index, other.stream_index);
         other.moved = true;
     }
@@ -479,8 +479,8 @@ namespace octotiger {
     radiation_gpu_kernel& radiation_gpu_kernel::operator=(
         radiation_gpu_kernel&& other)
     {
-        std::swap(d_payload_ptr, other.d_payload_ptr);
-        std::swap(h_payload_ptr, other.h_payload_ptr);
+        d_payload_ptr = std::move(other.d_payload_ptr);
+        h_payload_ptr = std::move(other.h_payload_ptr);
         std::swap(stream_index, other.stream_index);
         other.moved = true;
 

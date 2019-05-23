@@ -77,8 +77,8 @@ namespace octotiger {
 
     private:
         bool moved = false;
-        detail::device_payload_ptr d_payload_ptr = nullptr;
-        detail::host_payload_ptr h_payload_ptr = nullptr;
+        detail::device_payload_ptr d_payload_ptr;
+        detail::host_payload_ptr h_payload_ptr;
         std::size_t stream_index = static_cast<std::size_t>(-1);
     };
 }
