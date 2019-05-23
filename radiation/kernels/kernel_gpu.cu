@@ -21,16 +21,18 @@
 
 using namespace octotiger::detail;
 
-template <typename T>
-__device__ __host__ constexpr inline T cube(T const& val)
-{
-    return val * val * val;
-}
-
+///////////////////////////////////////////////////////////////////////////////
+// stream management
+///////////////////////////////////////////////////////////////////////////////
+// these exist so that cudaStream_t is not exposed through the API
+// otherwise a cudaStream_t can be put directly in the kernel struct
 std::mutex m;
 std::size_t stream_top = 0;
 std::map<std::size_t, cudaStream_t> streams;
 
+///////////////////////////////////////////////////////////////////////////////
+// device structs
+///////////////////////////////////////////////////////////////////////////////
 struct space_vector
 {
     explicit space_vector() = default;
@@ -113,7 +115,10 @@ struct d_pair
     T2 second{};
 };
 
-__device__ __host__ inline std::int64_t hindex(
+///////////////////////////////////////////////////////////////////////////////
+// misc fx
+///////////////////////////////////////////////////////////////////////////////
+inline std::int64_t hindex(
     std::int64_t i, std::int64_t j, std::int64_t k)
 {
     return i * H_DNX + j * H_DNY + k * H_DNZ;
@@ -124,6 +129,7 @@ __device__ inline double INVERSE(double a)
     return 1.0 / a;
 }
 
+// HACK: only implemented for marshak
 template <typename T>
 __device__ T B_p(
     std::int64_t const opts_problem, double const physcon_c, T rho, T e, T mmw)
@@ -132,6 +138,7 @@ __device__ T B_p(
     return T((physcon_c / 4.0 / M_PI)) * e;
 }
 
+// HACK: only implemented for marshak
 template <typename T>
 __device__ T kappa_p(
     std::int64_t const opts_problem, T rho, T e, T mmw, double X, double Z)
@@ -140,6 +147,7 @@ __device__ T kappa_p(
     return MARSHAK_OPAC;
 }
 
+// HACK: only implemented for marshak
 template <typename T>
 __device__ T kappa_R(
     std::int64_t const opts_problem, T rho, T e, T mmw, double X, double Z)
@@ -148,10 +156,18 @@ __device__ T kappa_R(
     return MARSHAK_OPAC;
 }
 
+// square of a number
 template <typename T>
 __device__ inline T sqr(T const& val)
 {
     return val * val;
+}
+
+// cube of a number
+template <typename T>
+__device__ constexpr inline T cube(T const& val)
+{
+    return val * val * val;
 }
 
 __device__ inline double ztwd_enthalpy(
@@ -204,6 +220,9 @@ __device__ double ztwd_energy(
         double(0));
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// kernel implementation
+///////////////////////////////////////////////////////////////////////////////
 template <typename F>
 __device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
     F const test, double const E, double const eg_t)
@@ -436,6 +455,9 @@ __global__ void __launch_bounds__(512, 1)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// wrapper implementation
+///////////////////////////////////////////////////////////////////////////////
 namespace octotiger {
     namespace detail {
         void host_payload_deleter::operator()(payload_t* ptr)
@@ -526,8 +548,10 @@ namespace octotiger {
         double const dt,
         double const clightinv)
     {
+        // avoid working directly with the pointer syntax when possible
         payload_t& h_payload = *h_payload_ptr;
 
+        // only extract data that is needed by the kernel
         {
             std::size_t index_counter = 0;
             for (std::size_t i = RAD_BW; i != RAD_NX - RAD_BW; ++i)
@@ -536,7 +560,9 @@ namespace octotiger {
                 {
                     for (std::size_t k = RAD_BW; k != RAD_NX - RAD_BW; ++k)
                     {
+                        // padded index
                         std::size_t const iiih = hindex(i + d, j + d, k + d);
+                        // copy output args sx, sy, sz, egas, tau, U[0:NRF - 1]
                         h_payload.sx[index_counter] = sx[iiih];
                         h_payload.sy[index_counter] = sy[iiih];
                         h_payload.sz[index_counter] = sz[iiih];
@@ -546,6 +572,7 @@ namespace octotiger {
                         {
                             h_payload.U[l][index_counter] = U[l][iiih];
                         }
+                        // copy input args rho, X_spc, Z_spc, mmw
                         h_payload.rho[index_counter] = rho[iiih];
                         h_payload.X_spc[index_counter] = X_spc[iiih];
                         h_payload.Z_spc[index_counter] = Z_spc[iiih];
@@ -557,6 +584,7 @@ namespace octotiger {
             }
         }
 
+        // memcpy array args to the gpu
         device_copy_from_host_async(
             d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
 
@@ -585,12 +613,15 @@ namespace octotiger {
             d_payload_ptr.get()                          //
         );
 
+        // memcpy output arrays from gpu
         // only overwrite the output portion
-        // outputs elements are first
+        // NOTE: payload memory layout begins with output arrays
         device_copy_to_host_async<output_payload_t>(
             d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
+        // barrier. wait until kernel finishes execution
         device_stream_sync(streams[stream_index]);
 
+        // write updated data back
         {
             std::size_t index_counter{};
             for (std::size_t i = RAD_BW; i < RAD_NX - RAD_BW; ++i)
@@ -599,7 +630,9 @@ namespace octotiger {
                 {
                     for (std::size_t k = RAD_BW; k < RAD_NX - RAD_BW; ++k)
                     {
+                        // padded index
                         std::size_t const iiih = hindex(i + d, j + d, k + d);
+                        // write output arrs sx, sy, sz, egas, U[0:NRF - 1]
                         sx[iiih] = h_payload.sx[index_counter];
                         sy[iiih] = h_payload.sy[index_counter];
                         sz[iiih] = h_payload.sz[index_counter];
