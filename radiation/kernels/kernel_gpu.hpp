@@ -7,7 +7,36 @@
 #include <cstdint>
 #include <vector>
 
+constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
+constexpr std::size_t GRID_ARRAY_SIZE = RAD_GRID_I * RAD_GRID_I * RAD_GRID_I;
+
 namespace octotiger {
+    namespace detail {
+        struct input_payload_t
+        {
+            double rho[GRID_ARRAY_SIZE];
+            double X_spc[GRID_ARRAY_SIZE];
+            double Z_spc[GRID_ARRAY_SIZE];
+            double mmw[GRID_ARRAY_SIZE];
+        };
+
+        struct output_payload_t
+        {
+            double sx[GRID_ARRAY_SIZE];
+            double sy[GRID_ARRAY_SIZE];
+            double sz[GRID_ARRAY_SIZE];
+            double egas[GRID_ARRAY_SIZE];
+            double tau[GRID_ARRAY_SIZE];
+            double U[NRF * GRID_ARRAY_SIZE];
+        };
+
+        struct payload_t
+        {
+            output_payload_t outputs;
+            input_payload_t inputs;
+        };
+    }
+
     void device_init();
     void device_reset();
 
@@ -15,6 +44,8 @@ namespace octotiger {
     {
         radiation_gpu_kernel();
         radiation_gpu_kernel(radiation_gpu_kernel const&) = delete;
+        radiation_gpu_kernel& operator=(radiation_gpu_kernel const&) = delete;
+        radiation_gpu_kernel& operator=(radiation_gpu_kernel&&);
         radiation_gpu_kernel(radiation_gpu_kernel&& other);
         ~radiation_gpu_kernel();
         void operator()(std::int64_t const opts_eos,
@@ -34,8 +65,8 @@ namespace octotiger {
 
     private:
         bool moved = false;
-        double* d_payload = nullptr;
-        double* h_payload_ptr = nullptr;
-        std::size_t stream_index;
+        detail::payload_t* d_payload_ptr = nullptr;
+        detail::payload_t* h_payload_ptr = nullptr;
+        std::size_t stream_index = static_cast<std::size_t>(-1);
     };
 }
