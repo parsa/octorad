@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-constexpr std::size_t ITERATIONS = 20000;
+constexpr std::size_t ITERATIONS = 13'139;
 constexpr std::size_t MAX_STREAMS = 4;
 
 template <typename K>
