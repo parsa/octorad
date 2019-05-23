@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 constexpr std::size_t RAD_GRID_I = RAD_NX - (2 * RAD_BW);
@@ -30,6 +31,22 @@ namespace octotiger {
             double Z_spc[GRID_ARRAY_SIZE];
             double mmw[GRID_ARRAY_SIZE];
         };
+
+        struct device_payload_deleter
+        {
+            void operator()(payload_t* ptr);
+        };
+
+        struct host_payload_deleter
+        {
+            void operator()(payload_t* ptr);
+        };
+
+        using device_payload_ptr =
+            std::unique_ptr<detail::payload_t, detail::device_payload_deleter>;
+
+        using host_payload_ptr =
+            std::unique_ptr<detail::payload_t, detail::host_payload_deleter>;
     }
 
     void device_init();
@@ -60,8 +77,8 @@ namespace octotiger {
 
     private:
         bool moved = false;
-        detail::payload_t* d_payload_ptr = nullptr;
-        detail::payload_t* h_payload_ptr = nullptr;
+        detail::device_payload_ptr d_payload_ptr = nullptr;
+        detail::host_payload_ptr h_payload_ptr = nullptr;
         std::size_t stream_index = static_cast<std::size_t>(-1);
     };
 }

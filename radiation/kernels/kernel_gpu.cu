@@ -437,6 +437,18 @@ __global__ void __launch_bounds__(512, 1)
 }
 
 namespace octotiger {
+    namespace detail {
+        void host_payload_deleter::operator()(payload_t* ptr)
+        {
+            host_pinned_free(ptr);
+        }
+
+        void device_payload_deleter::operator()(payload_t* ptr)
+        {
+            device_free(ptr);
+        }
+    }
+
     void device_init()
     {
         throw_if_cuda_error(cudaFree(0));
@@ -449,7 +461,6 @@ namespace octotiger {
 
     radiation_gpu_kernel::radiation_gpu_kernel()
       : d_payload_ptr(device_alloc<payload_t>())
-      // batch small transfers into a single transfer to reduce memcpy overhead
       , h_payload_ptr(host_pinned_alloc<payload_t>())
     {
         std::lock_guard<std::mutex> l(m);
@@ -480,8 +491,6 @@ namespace octotiger {
     {
         if (!moved)
         {
-            device_free(d_payload_ptr);
-            host_pinned_free(h_payload_ptr);
             device_stream_destroy(streams[stream_index]);
             {
                 std::lock_guard<std::mutex> l(m);
@@ -549,7 +558,7 @@ namespace octotiger {
         }
 
         device_copy_from_host_async(
-            d_payload_ptr, h_payload_ptr, 1, streams[stream_index]);
+            d_payload_ptr.get(), h_payload_ptr.get(), 1, streams[stream_index]);
 
         // launch the kernel
         launch_kernel(radiation_impl,                    // kernel
@@ -573,13 +582,13 @@ namespace octotiger {
             fgamma,                                      //
             dt,                                          //
             clightinv,                                   //
-            d_payload_ptr                                //
+            d_payload_ptr.get()                          //
         );
 
         // only overwrite the output portion
         // outputs elements are first
         device_copy_to_host_async<output_payload_t>(
-            d_payload_ptr, h_payload_ptr, 1, streams[stream_index]);
+            d_payload_ptr.get(), h_payload_ptr.get(), 1, streams[stream_index]);
         device_stream_sync(streams[stream_index]);
 
         {
