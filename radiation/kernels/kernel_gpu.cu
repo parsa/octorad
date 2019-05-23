@@ -520,12 +520,12 @@ namespace octotiger {
         }
     }
 
-    void radiation_gpu_kernel::load_args(payload_t& h_payload,
+    void radiation_gpu_kernel::load_args(payload_t& payload,
         std::int64_t const d, std::vector<double>& sx, std::vector<double>& sy,
         std::vector<double>& sz, std::vector<double>& egas,
-        std::vector<double>& tau, std::array<std::vector<double>, NRF> U,
-        std::vector<double> const& rho, std::vector<double> const X_spc,
-        std::vector<double> const Z_spc, std::vector<double> const mmw)
+        std::vector<double>& tau, std::array<std::vector<double>, NRF>& U,
+        std::vector<double> const& rho, std::vector<double> const& X_spc,
+        std::vector<double> const& Z_spc, std::vector<double> const& mmw)
     {
         std::size_t index_counter = 0;
         for (std::size_t i = RAD_BW; i != RAD_NX - RAD_BW; ++i)
@@ -537,20 +537,20 @@ namespace octotiger {
                     // padded index
                     std::size_t const iiih = hindex(i + d, j + d, k + d);
                     // copy output args sx, sy, sz, egas, tau, U[0:NRF - 1]
-                    h_payload.sx[index_counter] = sx[iiih];
-                    h_payload.sy[index_counter] = sy[iiih];
-                    h_payload.sz[index_counter] = sz[iiih];
-                    h_payload.egas[index_counter] = egas[iiih];
-                    h_payload.tau[index_counter] = tau[iiih];
+                    payload.sx[index_counter] = sx[iiih];
+                    payload.sy[index_counter] = sy[iiih];
+                    payload.sz[index_counter] = sz[iiih];
+                    payload.egas[index_counter] = egas[iiih];
+                    payload.tau[index_counter] = tau[iiih];
                     for (std::size_t l = 0; l < NRF; ++l)
                     {
-                        h_payload.U[l][index_counter] = U[l][iiih];
+                        payload.U[l][index_counter] = U[l][iiih];
                     }
                     // copy input args rho, X_spc, Z_spc, mmw
-                    h_payload.rho[index_counter] = rho[iiih];
-                    h_payload.X_spc[index_counter] = X_spc[iiih];
-                    h_payload.Z_spc[index_counter] = Z_spc[iiih];
-                    h_payload.mmw[index_counter] = mmw[iiih];
+                    payload.rho[index_counter] = rho[iiih];
+                    payload.X_spc[index_counter] = X_spc[iiih];
+                    payload.Z_spc[index_counter] = Z_spc[iiih];
+                    payload.mmw[index_counter] = mmw[iiih];
 
                     ++index_counter;
                 }
@@ -558,10 +558,10 @@ namespace octotiger {
         }
     }
 
-    void radiation_gpu_kernel::update_outputs(payload_t& h_payload,
+    void radiation_gpu_kernel::update_outputs(payload_t& payload,
         std::int64_t const d, std::vector<double>& sx, std::vector<double>& sy,
         std::vector<double>& sz, std::vector<double>& egas,
-        std::vector<double>& tau, std::array<std::vector<double>, NRF> U)
+        std::vector<double>& tau, std::array<std::vector<double>, NRF>& U)
     {
         std::size_t index_counter{};
         for (std::size_t i = RAD_BW; i < RAD_NX - RAD_BW; ++i)
@@ -573,13 +573,13 @@ namespace octotiger {
                     // padded index
                     std::size_t const iiih = hindex(i + d, j + d, k + d);
                     // write output arrs sx, sy, sz, egas, U[0:NRF - 1]
-                    sx[iiih] = h_payload.sx[index_counter];
-                    sy[iiih] = h_payload.sy[index_counter];
-                    sz[iiih] = h_payload.sz[index_counter];
-                    egas[iiih] = h_payload.egas[index_counter];
+                    sx[iiih] = payload.sx[index_counter];
+                    sy[iiih] = payload.sy[index_counter];
+                    sz[iiih] = payload.sz[index_counter];
+                    egas[iiih] = payload.egas[index_counter];
                     for (std::size_t l = 0; l < NRF; ++l)
                     {
-                        U[l][iiih] = h_payload.U[l][index_counter];
+                        U[l][iiih] = payload.U[l][index_counter];
                     }
 
                     ++index_counter;
@@ -607,20 +607,19 @@ namespace octotiger {
         std::vector<double>& egas,
         std::vector<double>& tau,
         double const fgamma,
-        std::array<std::vector<double>, NRF>
-            U,
-        std::vector<double> const mmw,
-        std::vector<double> const X_spc,
-        std::vector<double> const Z_spc,
+        std::array<std::vector<double>, NRF>& U,
+        std::vector<double> const& mmw,
+        std::vector<double> const& X_spc,
+        std::vector<double> const& Z_spc,
         double const dt,
         double const clightinv)
     {
         // avoid working directly with the pointer syntax when possible
-        payload_t& h_payload = *h_payload_ptr;
+        payload_t& payload = *h_payload_ptr;
 
         // only extract data that is needed by the kernel
         load_args(
-            h_payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
+            payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
         // memcpy array args to the gpu
         device_copy_from_host_async(
             d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
@@ -659,6 +658,6 @@ namespace octotiger {
         device_stream_sync(streams[stream_index]);
 
         // write updated data back
-        update_outputs(h_payload, d, sx, sy, sz, egas, tau, U);
+        update_outputs(payload, d, sx, sy, sz, egas, tau, U);
     }
 }
