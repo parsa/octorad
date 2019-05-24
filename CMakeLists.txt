@@ -81,7 +81,8 @@ if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_PLAYGROUND)
         PROPERTY FOLDER "Playground/02")
 
     add_executable(05-device_info playground/05-device_info.cu)
-    set_property(TARGET 05-device_info
+    add_executable(05-bank_conflict_demo playground/05-bank_conflict_demo.cu)
+    set_property(TARGET 05-device_info 05-bank_conflict_demo
         PROPERTY FOLDER "Playground/05")
 
     ###########################################################################

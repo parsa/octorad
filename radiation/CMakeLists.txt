@@ -37,7 +37,7 @@ if(OCTORAD_WITH_CUDA)
     )
     target_link_libraries(kernel_gpu PRIVATE global_config)
     #target_compile_features(kernel_gpu PUBLIC cxx_std_14)
-    target_compile_options(kernel_gpu PRIVATE --default-stream per-thread -Xptxas -v)
+    target_compile_options(kernel_gpu PRIVATE --default-stream per-thread -lineinfo -Xptxas -v)
     #set(CMAKE_CUDA_FLAGS "--default-stream per-thread -Xptxas -v")
 
     # CUDA enabled macro

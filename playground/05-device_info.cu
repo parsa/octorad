@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 
-namespace pcw {
 #define CE(err)                                                                \
     {                                                                          \
         if (err != cudaSuccess)                                                \
@@ -18,6 +17,7 @@ namespace pcw {
         }                                                                      \
     }
 
+namespace pcw {
     std::size_t device_count()
     {
         int ret = 0;
@@ -216,14 +216,14 @@ void print_device_info(std::size_t device_id)
         << "Can Use Host Pointer For Registered Memory: " << (bool)prop.canUseHostPointerForRegisteredMem << '\n'
         << "Cooperative Launch: " << (bool)prop.cooperativeLaunch << '\n'
         << "Cooperative Multi Device Launch: " << (bool)prop.cooperativeMultiDeviceLaunch << '\n'
-        ;
+     ;
 }
 
 int main()
 {
     try
     {
-        std::size_t device_count = pcw::device_count();
+        std::size_t const device_count = pcw::device_count();
         if (device_count == 0)
         {
             std::cout << "No CUDA device(s) found.\n";
@@ -233,9 +233,6 @@ int main()
             std::cout << device_count << " CUDA device(s) found.\n";
             for (std::size_t i = 0; i < pcw::device_count(); ++i)
             {
-                int driverVersion = 0;
-                int runtimeVersion = 0;
-
                 print_device_info(i);
             }
         }
