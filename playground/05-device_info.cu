@@ -24,22 +24,11 @@ namespace pcw {
         CE(cudaGetDeviceCount(&ret));
         return static_cast<std::size_t>(ret);
     }
-    std::size_t current_device_id()
-    {
-        int ret = 0;
-        CE(cudaGetDevice(&ret));
-        return static_cast<std::size_t>(ret);
-    }
     cudaDeviceProp device_props(std::size_t id)
     {
         cudaDeviceProp ret;
-        CE(
-            cudaGetDeviceProperties(&ret, static_cast<int>(id)));
+        CE(cudaGetDeviceProperties(&ret, static_cast<int>(id)));
         return (ret);
-    }
-    void set_current_device(std::size_t id)
-    {
-        CE(cudaSetDevice(static_cast<int>(id)));
     }
     std::pair<int, int> get_driver_version(std::size_t id)
     {
@@ -52,6 +41,111 @@ namespace pcw {
         int ret = 0;
         CE(cudaRuntimeGetVersion(&ret));
         return std::make_pair(ret / 1000, (ret % 100) / 10);
+    }
+
+    std::size_t current_device_id()
+    {
+        int ret = 0;
+        CE(cudaGetDevice(&ret));
+        return static_cast<std::size_t>(ret);
+    }
+    void set_current_device(std::size_t id)
+    {
+        CE(cudaSetDevice(static_cast<int>(id)));
+    }
+
+    namespace events {
+        cudaEvent_t create()
+        {
+            cudaEvent_t ev;
+            CE(cudaEventCreate(&ev));
+            return ev;
+        }
+        void record(cudaEvent_t ev, cudaStream_t stream = 0)
+        {
+            CE(cudaEventRecord(ev, stream));
+        }
+        void synchronize(cudaEvent_t ev)
+        {
+            CE(cudaEventSynchronize(ev));
+        }
+        float elapsed(cudaEvent_t start, cudaEvent_t end)
+        {
+            float ms;
+            CE(cudaEventElapsedTime(&ms, start, end));
+            return ms;
+        }
+        void destroy(cudaEvent_t ev)
+        {
+            CE(cudaEventDestroy(ev));
+        }
+
+        struct stopwatch_t
+        {
+            stopwatch_t(cudaStream_t stream = 0)
+              : stream_(stream)
+              , start_(create())
+              , end_(create())
+            {
+                record(start_, stream_);
+            }
+            float stop()
+            {
+                record(end_, stream_);
+                synchronize(end_);
+                return elapsed(start_, end_);
+            }
+            void reset()
+            {
+                record(start_, stream_);
+                stopped = false;
+            }
+            float report()
+            {
+                if (!stopped)
+                {
+                    return -1.0f;
+                }
+                return elapsed(start_, end_);
+            }
+            ~stopwatch_t()
+            {
+                destroy(start_);
+                destroy(end_);
+            }
+
+        private:
+            cudaStream_t stream_;
+            bool stopped = false;
+            cudaEvent_t start_;
+            cudaEvent_t end_;
+        };
+
+        struct timer_t
+        {
+            timer_t(float& ret, cudaStream_t stream = 0)
+              : stream_(stream)
+              , ret_(ret)
+              , start_(create())
+              , end_(create())
+            {
+                record(start_, stream_);
+            }
+            ~timer_t()
+            {
+                record(end_, stream_);
+                synchronize(end_);
+                ret_ = elapsed(start_, end_);
+                destroy(start_);
+                destroy(end_);
+            }
+
+        private:
+            cudaStream_t stream_;
+            float& ret_;
+            cudaEvent_t start_;
+            cudaEvent_t end_;
+        };
     }
 }
 
