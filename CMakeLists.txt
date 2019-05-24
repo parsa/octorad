@@ -80,6 +80,10 @@ if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_PLAYGROUND)
     set_property(TARGET 02-hi
         PROPERTY FOLDER "Playground/02")
 
+    add_executable(05-device_info playground/05-device_info.cu)
+    set_property(TARGET 05-device_info
+        PROPERTY FOLDER "Playground/05")
+
     ###########################################################################
     # Streams
     ###########################################################################
