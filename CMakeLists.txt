@@ -8,6 +8,7 @@ option(OCTORAD_WITH_PLAYGROUND "Enable old toy kernels unrelated to Octo-tiger (
 option(OCTORAD_WITH_SCRATCHPAD "Enable the scratchpad project(s) (default: OFF)" OFF)
 option(OCTORAD_WITH_VC "Enable Vc model, requires Vc CMake module to be visible (default: OFF)" OFF)
 option(OCTORAD_WITH_CUDA "Enable GPU kernels and testing codes (default: ON)" ON)
+option(OCTORAD_WITH_HPX "Enable GPU kernels and testing codes (default: ON)" ON)
 
 set(OCTORAD_DUMP_COUNT "" CACHE STRING "Number of dumped cases")
 set(OCTORAD_DUMP_DIR "" CACHE PATH "Path to directory containing `*.args` and `*.outs` dump files")
@@ -56,6 +57,13 @@ if(OCTORAD_WITH_VC)
 endif()
 
 ###############################################################################
+# HPX
+###############################################################################
+if(OCTORAD_WITH_HPX)
+    find_package(HPX REQUIRED)
+endif()
+
+###############################################################################
 # Testpad
 ###############################################################################
 if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_SCRATCHPAD)
@@ -74,16 +82,11 @@ if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_PLAYGROUND)
     add_executable(01-heat-conduction playground/01-heat-conduction.cu playground/cuda-gpuinfo.h)
     add_executable(01-heat-conduction-solution playground/01-heat-conduction-solution.cu)
     set_property(TARGET 01-heat-conduction 01-heat-conduction-solution
-        PROPERTY FOLDER "Playground/01")
+        PROPERTY FOLDER "Playground/01 - Hello World")
 
     add_executable(02-hi playground/02-hi.cu)
     set_property(TARGET 02-hi
-        PROPERTY FOLDER "Playground/02")
-
-    add_executable(05-device_info playground/05-device_info.cu)
-    add_executable(05-bank_conflict_demo playground/05-bank_conflict_demo.cu)
-    set_property(TARGET 05-device_info 05-bank_conflict_demo
-        PROPERTY FOLDER "Playground/05")
+        PROPERTY FOLDER "Playground/02 - Hello World")
 
     ###########################################################################
     # Streams
@@ -92,14 +95,30 @@ if(OCTORAD_WITH_CUDA AND OCTORAD_WITH_PLAYGROUND)
     add_executable(03-stream_per_thread playground/03-multistream.cu)
     target_compile_options(03-stream_per_thread PRIVATE --default-stream per-thread)
     set_property(TARGET 03-stream_legacy 03-stream_per_thread
-        PROPERTY FOLDER "Playground/Streams")
+        PROPERTY FOLDER "Playground/04 - Streams")
 
     add_executable(04-stdthreads_legacy playground/04-thread_test.cu)
     add_executable(04-stdthreads_per_thread playground/04-thread_test.cu)
     target_compile_options(04-stdthreads_per_thread PRIVATE --default-stream per-thread)
 
     set_property(TARGET 04-stdthreads_legacy 04-stdthreads_per_thread
-        PROPERTY FOLDER "Playground/Streams")
+        PROPERTY FOLDER "Playground/04 - Streams")
+
+    ###########################################################################
+    # Device Exploration
+    ###########################################################################
+    add_executable(05-device_info playground/05-device_info.cu)
+    add_executable(05-bank_conflict_demo playground/05-bank_conflict_demo.cu)
+    set_property(TARGET 05-device_info 05-bank_conflict_demo
+        PROPERTY FOLDER "Playground/05 - Device Exploration")
+
+    ###########################################################################
+    # Matrix Multiplication
+    ###########################################################################
+    add_executable(06-matmul playground/06-matmul.cu)
+    add_executable(06-matmul_shared_mem playground/06-matmul_shared_mem.cu)
+    set_property(TARGET 06-matmul 06-matmul_shared_mem
+        PROPERTY FOLDER "Playground/06 - Matrix Multiplication")
 endif()
 
 ###############################################################################

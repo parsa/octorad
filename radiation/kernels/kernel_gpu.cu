@@ -621,8 +621,8 @@ namespace octotiger {
         load_args(
             payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
         // memcpy array args to the gpu
-        device_copy_from_host_async(
-            d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
+        device_copy_from_host(copy_policy::async, d_payload_ptr.get(),
+            h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
         launch_kernel(radiation_impl,                    // kernel
@@ -652,7 +652,7 @@ namespace octotiger {
         // memcpy output arrays from gpu
         // only overwrite the output portion
         // NOTE: payload memory layout begins with output arrays
-        device_copy_to_host_async<output_payload_t>(
+        device_copy_to_host<output_payload_t>(copy_policy::async,
             d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
         // barrier. wait until kernel finishes execution
         device_stream_sync(streams[stream_index]);

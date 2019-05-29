@@ -8,6 +8,17 @@
 
 #include "cuda_runtime.h"
 
+namespace copy_policy {
+    struct synchronous_policy
+    {
+    };
+    struct asynchronous_policy
+    {
+    };
+    constexpr synchronous_policy sync;
+    constexpr asynchronous_policy async;
+}
+
 inline void throw_if_cuda_error(cudaError_t err = cudaGetLastError())
 {
     if (err != cudaSuccess)
@@ -35,9 +46,16 @@ T* device_alloc(std::size_t const count = 1)
     return device_ptr;
 }
 
+template <typename T, typename Policy>
+T* device_copy_from_host(Policy, T* const device_ptr, T* const payload,
+    cudaStream_t stream, std::size_t const count)
+{
+    static_assert(sizeof(Policy) == 0, "Invalid execution policy specified.");
+}
+
 template <typename T>
-T* device_copy_from_host_async(T* const device_ptr, T* const payload,
-    cudaStream_t stream, std::size_t const count = 1)
+T* device_copy_from_host(copy_policy::asynchronous_policy, T* const device_ptr,
+    T* const payload, cudaStream_t stream, std::size_t const count = 1)
 {
     throw_if_cuda_error(cudaMemcpyAsync(device_ptr, payload, count * sizeof(T),
         cudaMemcpyHostToDevice, stream));
@@ -45,7 +63,8 @@ T* device_copy_from_host_async(T* const device_ptr, T* const payload,
 }
 
 template <typename T>
-T* device_copy_from_host(
+T* device_copy_from_host(copy_policy::synchronous_policy,
+
     T* const device_ptr, T* const payload, std::size_t const count)
 {
     throw_if_cuda_error(cudaMemcpy(
@@ -54,30 +73,30 @@ T* device_copy_from_host(
 }
 
 template <typename T, typename It>
-T* device_copy_from_host(
-    T* const device_ptr, It const& begin, std::size_t size)
+T* device_copy_from_host(copy_policy::synchronous_policy, T* const device_ptr,
+    It const& begin, std::size_t size)
 {
     throw_if_cuda_error(cudaMemcpy(
         device_ptr, begin, size * sizeof(T), cudaMemcpyHostToDevice));
     return device_ptr;
 }
-template <typename T, typename It>
-T* device_alloc_copy_from_host(It const& begin, std::size_t size)
+template <typename T, typename Policy>
+void device_copy_to_host(Policy, T const* const device_ptr, T* const payload,
+    cudaStream_t stream, std::size_t const count = 1)
 {
-    T* const device_ptr = device_alloc<T>(size);
-    device_copy_from_host<T>(device_ptr, begin, size);
-    return device_ptr;
+    static_assert(sizeof(Policy) == 0, "Invalid execution policy specified.");
 }
 template <typename T>
-void device_copy_to_host_async(T const* const device_ptr, T* const payload,
-    cudaStream_t stream, std::size_t const count = 1)
+void device_copy_to_host(copy_policy::asynchronous_policy,
+    T const* const device_ptr, T* const payload, cudaStream_t stream,
+    std::size_t const count = 1)
 {
     throw_if_cuda_error(cudaMemcpyAsync(payload, device_ptr, count * sizeof(T),
         cudaMemcpyDeviceToHost, stream));
 }
 
 template <typename T>
-void device_copy_to_host(
+void device_copy_to_host(copy_policy::synchronous_policy,
     T const* const device_ptr, T* const payload, std::size_t const count)
 {
     throw_if_cuda_error(cudaMemcpy(
@@ -85,7 +104,7 @@ void device_copy_to_host(
 }
 
 template <typename T, typename It>
-void device_copy_to_host(
+void device_copy_to_host(copy_policy::synchronous_policy,
     T const* const device_ptr, It begin, std::size_t size)
 {
     throw_if_cuda_error(cudaMemcpy(
