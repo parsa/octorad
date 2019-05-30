@@ -16,16 +16,43 @@
         }                                                                      \
     }
 
+constexpr std::size_t data_COUNT = 1;
+
 struct payload_t
 {
-    float data[1];
+    float data[data_COUNT];
 
-    __host__ __device__ float operator()(std::size_t idx) const
+    float* begin()
+    {
+        return &data[0];
+    }
+
+    float* end()
+    {
+        return &data[0] + data_COUNT;
+    }
+
+    float const* begin() const
+    {
+        return &data[0];
+    }
+
+    float const* end() const
+    {
+        return &data[0] + data_COUNT;
+    }
+
+    std::size_t size() const
+    {
+        return data_COUNT;
+    }
+
+    __host__ __device__ float operator[](std::size_t idx) const
     {
         return data[idx];
     }
 
-    __host__ __device__ float& operator()(std::size_t idx)
+    __host__ __device__ float& operator[](std::size_t idx)
     {
         return data[idx];
     }
@@ -35,14 +62,19 @@ struct k1_t;
 
 struct data_t
 {
+    data_t(std::promise<payload_t> p, k1_t& k_)
+      : promise(std::move(p))
+      , kernel(k_)
+    {
+    }
     std::promise<payload_t> promise;
-    k1_t* k;
+    k1_t& kernel;
 };
 
 __global__ void k1(payload_t* payload_ptr)
 {
     payload_t& payload = *payload_ptr;
-    payload(0) = 3.0f;
+    payload[0] = 3.0f;
 }
 
 void CUDART_CB callback(void* args);
@@ -68,9 +100,10 @@ struct k1_t
 
     void launch(payload_t const& p, data_t* d_ptr)
     {
-        data_t& d = *d_ptr;
         // copy values over
-        val()(0) = p(0);
+        payload_t& v = val();
+        std::copy(p.begin(), p.end(), v.begin());
+        val()[0] = p[0];
 
         // copy to device
         CE(cudaMemcpyAsync(dev_payload_ptr, host_payload_ptr, sizeof(payload_t),
@@ -84,20 +117,17 @@ struct k1_t
         CE(cudaMemcpyAsync(host_payload_ptr, dev_payload_ptr, sizeof(payload_t),
             cudaMemcpyDeviceToHost, strm));
         // async callback
-        d.k = this;
         CE(cudaLaunchHostFunc(strm, callback, d_ptr));
     }
 
-    std::future<payload_t> operator()(payload_t p)
+    std::future<payload_t> operator()(payload_t& p)
     {
-        std::promise<payload_t> prms;
-        std::future<payload_t> ret = prms.get_future();
-        data_t* d_ptr = new data_t;
-        data_t& d = *d_ptr;
-        d.promise = std::move(prms);
+        std::promise<payload_t> payload_promise;
+        std::future<payload_t> payload_future = payload_promise.get_future();
+        data_t* d_ptr = new data_t(std::move(payload_promise), *this);
         launch(p, d_ptr);
 
-        return ret;
+        return payload_future;
     }
 
     payload_t val() const
@@ -120,7 +150,7 @@ void CUDART_CB callback(void* args)
     data_t* d_ptr = static_cast<data_t*>(args);
     data_t& d = *d_ptr;
 
-    payload_t ret = *(d.k->host_payload_ptr);
+    payload_t ret = *(d.kernel.host_payload_ptr);
     d.promise.set_value(std::move(ret));
 
     delete d_ptr;
@@ -132,14 +162,14 @@ void test()
     payload_t payload;
 
     // initialization
-    payload(0) = 1.0f;
+    payload[0] = 1.0f;
 
     auto f1 = k(payload);
     auto f2 = k(payload);
     payload_t outcome1 = f1.get();
     payload_t outcome2 = f2.get();
 
-    assert(3.0f == outcome1(0));
+    assert(3.0f == outcome1[0]);
 }
 
 int main()
