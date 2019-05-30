@@ -222,9 +222,9 @@ __device__ double ztwd_energy(
 ///////////////////////////////////////////////////////////////////////////////
 // kernel implementation
 ///////////////////////////////////////////////////////////////////////////////
-template <typename F>
+template <typename Fx>
 __device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
-    F const test, double const E, double const eg_t)
+    Fx const test, double const E, double const eg_t)
 {
     // Bisection root finding method
     // Indices of max, mid, and min
@@ -536,7 +536,7 @@ namespace octotiger {
                 {
                     // padded index
                     std::size_t const iiih = hindex(i + d, j + d, k + d);
-                    // copy output args sx, sy, sz, egas, tau, U[0:NRF - 1]
+                    // copy output arrays sx, sy, sz, egas, tau, U[0:NRF - 1]
                     payload.sx[index_counter] = sx[iiih];
                     payload.sy[index_counter] = sy[iiih];
                     payload.sz[index_counter] = sz[iiih];
@@ -546,7 +546,7 @@ namespace octotiger {
                     {
                         payload.U[l][index_counter] = U[l][iiih];
                     }
-                    // copy input args rho, X_spc, Z_spc, mmw
+                    // copy input arrays rho, X_spc, Z_spc, mmw
                     payload.rho[index_counter] = rho[iiih];
                     payload.X_spc[index_counter] = X_spc[iiih];
                     payload.Z_spc[index_counter] = Z_spc[iiih];
@@ -572,7 +572,7 @@ namespace octotiger {
                 {
                     // padded index
                     std::size_t const iiih = hindex(i + d, j + d, k + d);
-                    // write output arrs sx, sy, sz, egas, U[0:NRF - 1]
+                    // update output arrays sx, sy, sz, egas, U[0:NRF - 1]
                     sx[iiih] = payload.sx[index_counter];
                     sy[iiih] = payload.sy[index_counter];
                     sz[iiih] = payload.sz[index_counter];
@@ -618,35 +618,28 @@ namespace octotiger {
         payload_t& payload = *h_payload_ptr;
 
         // only extract data that is needed by the kernel
-        load_args(
-            payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
+        load_args(payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
         // memcpy array args to the gpu
         device_copy_from_host(copy_policy::async, d_payload_ptr.get(),
             h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
-        launch_kernel(radiation_impl,                    // kernel
-            dim3(1),                                     // grid dims
-            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I),    // block dims
-            streams[stream_index],                       // stream
-            opts_eos,                                    //
-            opts_problem,                                //
-            opts_dual_energy_sw1,                        //
-            opts_dual_energy_sw2,                        //
-            physcon_A,                                   //
-            physcon_B,                                   //
-            physcon_c,                                   //
-            er_i,                                        //
-            fx_i,                                        //
-            fy_i,                                        //
-            fz_i,                                        //
-            d,                                           //
-            RAD_GRID_I,                                  //
-            GRID_ARRAY_SIZE,                             //
-            fgamma,                                      //
-            dt,                                          //
-            clightinv,                                   //
-            d_payload_ptr.get()                          //
+        launch_kernel(radiation_impl,                      // kernel
+            dim3(1),                                       // grid dims
+            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I),      // block dims
+            streams[stream_index],                         // stream
+            opts_eos, opts_problem,                        //
+            opts_dual_energy_sw1, opts_dual_energy_sw2,    //
+            physcon_A, physcon_B, physcon_c,               //
+            er_i,                                          //
+            fx_i, fy_i, fz_i,                              //
+            d,                                             //
+            RAD_GRID_I,                                    //
+            GRID_ARRAY_SIZE,                               //
+            fgamma,                                        //
+            dt,                                            //
+            clightinv,                                     //
+            d_payload_ptr.get()                            //
         );
 
         // memcpy output arrays from gpu

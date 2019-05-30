@@ -151,21 +151,31 @@ void device_stream_sync(cudaStream_t strm)
     fail_if_cuda_error(cudaStreamSynchronize(strm));
 }
 
-template <typename F>
-void launch_kernel(F fx, dim3 grid_dim = dim3(1), dim3 block_dim = dim3(1),
-    cudaStream_t default_stream = 0)
+template <typename Fx>
+void launch_kernel(Fx fx, dim3 grid_dim = dim3(1), dim3 block_dim = dim3(1),
+    cudaStream_t stream = 0)
 {
+    // dynamic shared memory available to each thread block
+    constexpr std::size_t shared_memory_size = 0;
     throw_if_cuda_error(cudaLaunchKernel(
-        (void*) fx, grid_dim, block_dim, nullptr, 0, default_stream));
+        (void*) fx, grid_dim, block_dim, nullptr, shared_memory_size, stream));
 }
 
-template <typename F, typename... Ts>
-void launch_kernel(F fx, dim3 grid_dim = dim3(1), dim3 block_dim = dim3(1),
-    cudaStream_t default_stream = 0, Ts... args)
+template <typename Fx, typename... Ts>
+void launch_kernel(Fx fx, dim3 grid_dim = dim3(1), dim3 block_dim = dim3(1),
+    cudaStream_t stream = 0, Ts... args)
 {
     void* kernel_args[sizeof...(args)] = {&args...};
-    throw_if_cuda_error(cudaLaunchKernel(
-        (void*) fx, grid_dim, block_dim, kernel_args, 0, default_stream));
+    // dynamic shared memory available to each thread block
+    constexpr std::size_t shared_memory_size = 0;
+    throw_if_cuda_error(cudaLaunchKernel((void*) fx, grid_dim, block_dim,
+        kernel_args, shared_memory_size, stream));
+}
+
+template <typename Fx>
+void enqueue_host_fx(Fx fx, cudaStream_t stream = 0, void* user_data = nullptr)
+{
+    throw_if_cuda_error(cudaLaunchHostFunc(stream, fx, user_data));
 }
 
 template <class T>
