@@ -27,8 +27,15 @@ set_property(TARGET 04-stdthreads_legacy 04-stdthreads_per_thread
 # Device Exploration
 ###########################################################################
 add_executable(05-device_info 05-device_info.cu)
+set_property(TARGET 05-device_info
+    PROPERTY FOLDER "Playground/05 - Device Exploration")
+
 add_executable(05-bank_conflict_demo 05-bank_conflict_demo.cu)
-set_property(TARGET 05-device_info 05-bank_conflict_demo
+set_property(TARGET 05-bank_conflict_demo
+    PROPERTY FOLDER "Playground/05 - Device Exploration")
+
+add_executable(05-dynamic_shared_mem 05-dynamic_shared_mem.cu)
+set_property(TARGET 05-dynamic_shared_mem
     PROPERTY FOLDER "Playground/05 - Device Exploration")
 
 ###########################################################################
