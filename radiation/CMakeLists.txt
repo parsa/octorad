@@ -36,17 +36,29 @@ if(OCTORAD_WITH_CUDA)
         kernels/kernel_gpu.cu
     )
     target_link_libraries(kernel_gpu PRIVATE global_config)
+
+    # Kept for reference
     #target_compile_features(kernel_gpu PUBLIC cxx_std_14)
-    target_compile_options(kernel_gpu PRIVATE --default-stream per-thread -lineinfo -Xptxas -v)
+
+    # Kept for reference
     #set(CMAKE_CUDA_FLAGS "--default-stream per-thread -Xptxas -v")
+
+    # A default stream per thread. it may run concurrently with non-default streams
+    target_compile_options(kernel_gpu PRIVATE --default-stream per-thread)
+    # Print register usage info
+    target_compile_options(kernel_gpu PRIVATE -Xptxas -v)
+    # Target architecture
+    target_compile_options(kernel_gpu PRIVATE -arch=sm_61)
 
     # CUDA enabled macro
     target_compile_definitions(kernel_gpu INTERFACE
         OCTORAD_HAVE_CUDA)
 
-    # allow CUDA code to call device functions implemented in other translation units
+    # Kept for reference
+    # Allow CUDA code to call device functions implemented in other translation units
     # improve incremental build performance (only recompile and link modified units)
     #set_target_properties(kernel_gpu PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
     set_property(TARGET kernel_gpu PROPERTY FOLDER "Octo-tiger/Kernels")
 endif()
 add_library(kernel_cpu
