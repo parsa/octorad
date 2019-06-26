@@ -54,8 +54,11 @@ set_property(TARGET 07-callback
     PROPERTY FOLDER "Playground/07 - Callbacks")
 
 ###########################################################################
-# Callbacks
+# Thrust
 ###########################################################################
 add_executable(08-thrust_dem 08-thrust_dem.cu)
 set_property(TARGET 08-thrust_dem
+    PROPERTY FOLDER "Playground/08 - Thrust Demo")
+add_executable(08-thrust_batch_cp 08-thrust_batch_cp.cu)
+set_property(TARGET 08-thrust_batch_cp
     PROPERTY FOLDER "Playground/08 - Thrust Demo")
