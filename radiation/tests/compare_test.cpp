@@ -86,7 +86,7 @@ std::size_t select_random_case(std::size_t min_val, std::size_t max_val)
 
 template <typename K>
 double run_kernel(
-    std::vector<octotiger::fx_case>& test_cases, std::string const title)
+    std::vector<octotiger::fx_case>& test_cases, std::string const& title)
 {
     double overall_et{};
     double pure_et{};

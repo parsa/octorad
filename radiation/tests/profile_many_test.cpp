@@ -122,7 +122,7 @@ int main()
         std::printf(
             "\rloaded %zd cases in %gs\t\t\n", test_cases.size(), load_et);
 
-        auto gpu_k_et = run_kernel<octotiger::radiation_gpu_kernel>(test_cases);
+        run_kernel<octotiger::radiation_gpu_kernel>(test_cases);
     }
     catch (std::exception const& e)
     {

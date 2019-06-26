@@ -8,7 +8,7 @@
 
 constexpr std::size_t const arr_size = 2744;
 
-void investigate_array(std::vector<double> v, std::string const var_name)
+void investigate_array(std::vector<double> v, std::string const& var_name)
 {
     auto last = std::unique(v.begin(), v.end());
     auto distance = std::distance(v.begin(), last);
@@ -30,7 +30,7 @@ void investigate_case(std::size_t index)
         (arr_size == test_case.args.Z_spc.size());
     for (auto const& sv : test_case.args.U)
     {
-        same_size_arg_arrs = same_size_arg_arrs && sv.size();
+        same_size_arg_arrs = same_size_arg_arrs && !sv.empty();
     }
     if (!same_size_arg_arrs)
     {

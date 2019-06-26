@@ -19,7 +19,7 @@ namespace octotiger {
     }
 
     bool are_ranges_same(std::vector<double> const& r1,
-        std::vector<double> const& r2, std::string const var_name)
+        std::vector<double> const& r2, std::string const& var_name)
     {
         if (!std::equal(r1.begin(), r1.end(), r2.begin(), almost_equal))
         {
@@ -45,7 +45,7 @@ namespace octotiger {
 
     bool are_ranges_same(std::array<std::vector<double>, NRF> const& r1,
         std::array<std::vector<double>, NRF> const& r2,
-        std::string const var_name)
+        std::string const& var_name)
     {
         for (std::size_t i = 0; i < NRF; ++i)
         {
