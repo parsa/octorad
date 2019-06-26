@@ -10,7 +10,7 @@ struct scoped_timer;
 template <typename T, std::intmax_t N, std::intmax_t D>
 struct scoped_timer<T, std::ratio<N, D>>
 {
-    scoped_timer(T& r)
+    explicit scoped_timer(T& r)
       : start_timepoint(std::chrono::high_resolution_clock::now())
       , value{r}
     {
