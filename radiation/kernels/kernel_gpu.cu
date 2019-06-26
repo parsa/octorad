@@ -478,8 +478,7 @@ namespace octotiger {
     }
 
     radiation_gpu_kernel::radiation_gpu_kernel()
-      : d_payload_ptr(device_alloc<payload_t>())
-      , h_payload_ptr(host_pinned_alloc<payload_t>())
+      : h_payload_ptr(host_pinned_alloc<payload_t>())
     {
         std::lock_guard<std::mutex> l(m);
         stream_index = stream_top++;
@@ -488,7 +487,6 @@ namespace octotiger {
 
     radiation_gpu_kernel::radiation_gpu_kernel(radiation_gpu_kernel&& other)
     {
-        d_payload_ptr = std::move(other.d_payload_ptr);
         h_payload_ptr = std::move(other.h_payload_ptr);
         std::swap(stream_index, other.stream_index);
         other.moved = true;
@@ -497,7 +495,6 @@ namespace octotiger {
     radiation_gpu_kernel& radiation_gpu_kernel::operator=(
         radiation_gpu_kernel&& other)
     {
-        d_payload_ptr = std::move(other.d_payload_ptr);
         h_payload_ptr = std::move(other.h_payload_ptr);
         std::swap(stream_index, other.stream_index);
         other.moved = true;
@@ -617,8 +614,8 @@ namespace octotiger {
         // only extract data that is needed by the kernel
         load_args(payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
         // memcpy array args to the gpu
-        device_copy_from_host(copy_policy::async, d_payload_ptr.get(),
-            h_payload_ptr.get(), streams[stream_index]);
+        //device_copy_from_host(copy_policy::async, d_payload_ptr.get(),
+        //    h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
         launch_kernel(radiation_impl,                        // kernel
@@ -636,14 +633,14 @@ namespace octotiger {
             fgamma,                                          //
             dt,                                              //
             clightinv,                                       //
-            d_payload_ptr.get()                              //
+            h_payload_ptr.get()                              //
         );
 
         // memcpy output arrays from gpu
         // only overwrite the output portion
         // NOTE: payload memory layout begins with output arrays
-        device_copy_to_host<output_payload_t>(copy_policy::async,
-            d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
+        //device_copy_to_host<output_payload_t>(copy_policy::async,
+        //    d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
         // barrier. wait until kernel finishes execution
         device_stream_sync(streams[stream_index]);
 

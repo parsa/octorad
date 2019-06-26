@@ -42,7 +42,7 @@ template <typename T>
 T* device_alloc(std::size_t const count = 1)
 {
     T* device_ptr;
-    throw_if_cuda_error(cudaMalloc((void**) &device_ptr, count * sizeof(T)));
+    throw_if_cuda_error(cudaMallocManaged((void**) &device_ptr, count * sizeof(T)));
     return device_ptr;
 }
 
