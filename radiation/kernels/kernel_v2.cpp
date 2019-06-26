@@ -369,9 +369,9 @@ namespace octotiger {
         std::vector<double> const& rho, std::vector<double>& sx,
         std::vector<double>& sy, std::vector<double>& sz,
         std::vector<double>& egas, std::vector<double>& tau,
-        double const fgamma, std::array<std::vector<double>, NRF> U,
-        std::vector<double> const mmw, std::vector<double> const X_spc,
-        std::vector<double> const Z_spc, double const dt,
+        double const fgamma, std::array<std::vector<double>, NRF>& U,
+        std::vector<double> const& mmw, std::vector<double> const& X_spc,
+        std::vector<double> const& Z_spc, double const dt,
         double const clightinv)
     {
         v2::radiation_impl(opts_eos, opts_dual_energy_sw1, opts_dual_energy_sw2,

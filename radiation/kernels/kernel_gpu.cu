@@ -235,11 +235,11 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
     double f_min = test(de_min);
     double f_mid = test(de_mid);
     // Max iterations
-    constexpr std::size_t max_iterations = 50;
+    constexpr std::size_t MAX_ITERATIONS = 50;
     // Errors
     double const error_tolerance = 1.0e-9;
 
-    for (std::size_t i = 0; i < max_iterations; ++i)
+    for (std::size_t i = 0; i < MAX_ITERATIONS; ++i)
     {
         // Root solver has converged if error is smaller that error tolerance
         double const error = fmax(fabs(f_mid), fabs(f_min)) / (E + eg_t);
@@ -341,7 +341,7 @@ __device__ d_pair<double, space_vector> implicit_radiation_step(
         double((E - E0) * dtinv * rhoc2), ((F - F0) * dtinv * rhoc2 * c));
 }
 
-__global__ void __launch_bounds__(512, 1)
+__global__ void //__launch_bounds__(512, 1)
     radiation_impl(std::int64_t const opts_eos,
         std::int64_t const opts_problem,
         double const opts_dual_energy_sw1,
@@ -365,7 +365,7 @@ __global__ void __launch_bounds__(512, 1)
 
     std::int64_t const i = threadIdx.x;
     std::int64_t const j = threadIdx.y;
-    std::int64_t const k = threadIdx.z;
+    std::int64_t const k = threadIdx.z + blockDim.z * blockIdx.z;
 
     std::int64_t const iiih = (i * grid_i_size + j) * grid_i_size + k;
     std::int64_t const iiir = (i * grid_i_size + j) * grid_i_size + k;
@@ -430,11 +430,6 @@ __global__ void __launch_bounds__(512, 1)
     {
         e = e1;
     }
-    if (opts_problem == MARSHAK)
-    {
-        p.egas[iiih] = e;
-        p.sx[iiih] = p.sy[iiih] = p.sz[iiih] = 0;
-    }
     if (p.U[er_i][iiir] <= 0.0)
     {
         std::printf("Er = %e %e %e %e\n", E0, E1, p.U[er_i][iiir], dt);
@@ -449,8 +444,10 @@ __global__ void __launch_bounds__(512, 1)
     }
     if (opts_problem == MARSHAK)
     {
-        p.sx[iiih] = p.sy[iiih] = p.sz[iiih] = 0.0;
         p.egas[iiih] = e;
+        p.sx[iiih] = 0.0;
+        p.sy[iiih] = 0.0;
+        p.sz[iiih] = 0.0;
     }
 }
 
@@ -624,22 +621,22 @@ namespace octotiger {
             h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
-        launch_kernel(radiation_impl,                      // kernel
-            dim3(1),                                       // grid dims
-            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I),      // block dims
-            streams[stream_index],                         // stream
-            opts_eos, opts_problem,                        //
-            opts_dual_energy_sw1, opts_dual_energy_sw2,    //
-            physcon_A, physcon_B, physcon_c,               //
-            er_i,                                          //
-            fx_i, fy_i, fz_i,                              //
-            d,                                             //
-            RAD_GRID_I,                                    //
-            GRID_ARRAY_SIZE,                               //
-            fgamma,                                        //
-            dt,                                            //
-            clightinv,                                     //
-            d_payload_ptr.get()                            //
+        launch_kernel(radiation_impl,                        // kernel
+            dim3(4),                                         // grid dims
+            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I / 4),    // block dims
+            streams[stream_index],                           // stream
+            opts_eos, opts_problem,                          //
+            opts_dual_energy_sw1, opts_dual_energy_sw2,      //
+            physcon_A, physcon_B, physcon_c,                 //
+            er_i,                                            //
+            fx_i, fy_i, fz_i,                                //
+            d,                                               //
+            RAD_GRID_I,                                      //
+            GRID_ARRAY_SIZE,                                 //
+            fgamma,                                          //
+            dt,                                              //
+            clightinv,                                       //
+            d_payload_ptr.get()                              //
         );
 
         // memcpy output arrays from gpu

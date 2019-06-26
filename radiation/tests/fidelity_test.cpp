@@ -25,7 +25,8 @@ bool check_run_result(octotiger::fx_case test_case, K& kernel)
         octotiger::are_ranges_same(a.sx, test_case.outs.sx, "sx") &&
         octotiger::are_ranges_same(a.sy, test_case.outs.sy, "sy") &&
         octotiger::are_ranges_same(a.sz, test_case.outs.sz, "sz") &&
-        octotiger::are_ranges_same(a.U, test_case.outs.U, "U");
+        octotiger::are_ranges_same(a.tau, test_case.outs.tau, "tau");
+    octotiger::are_ranges_same(a.U, test_case.outs.U, "U");
     return result;
 }
 
@@ -42,35 +43,41 @@ struct case_checker
 
     bool operator()(std::size_t index)
     {
-        std::printf("***** load case %zd *****\n", index);
+        std::printf("***** load case %d *****\n", static_cast<int>(index));
         octotiger::fx_case const test_case = octotiger::import_case(index);
 
         std::printf("***** cpu kernel (reference) *****\n");
 
         if (!check_run_result(test_case, cpu_kernel))
         {
-            std::printf("case %zd code integrity check failed.\n", index);
+            std::printf("case %d code integrity check failed.\n",
+                static_cast<int>(index));
             return false;
         }
-        std::printf("case %zd code integrity check passed.\n", index);
+        std::printf(
+            "case %d code integrity check passed.\n", static_cast<int>(index));
 
         std::printf("***** cpu kernel (v2) *****\n");
 
         if (!check_run_result(test_case, v2_kernel))
         {
-            std::printf("case %zd code integrity check failed.\n", index);
+            std::printf("case %d code integrity check failed.\n",
+                static_cast<int>(index));
             return false;
         }
-        std::printf("case %zd code integrity check passed.\n", index);
+        std::printf(
+            "case %d code integrity check passed.\n", static_cast<int>(index));
 
 #if OCTORAD_HAVE_CUDA
         std::printf("***** gpu kernel (ported code) *****\n");
         if (!check_run_result(test_case, gpu_kernel))
         {
-            std::printf("case %zd code integrity check failed.\n", index);
+            std::printf("case %d code integrity check failed.\n",
+                static_cast<int>(index));
             return false;
         }
-        std::printf("case %zd code integrity check passed.\n", index);
+        std::printf(
+            "case %d code integrity check passed.\n", static_cast<int>(index));
 #endif
 
         return true;

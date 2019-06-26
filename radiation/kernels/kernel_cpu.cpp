@@ -302,9 +302,9 @@ namespace octotiger {
             std::vector<double>& sx, std::vector<double>& sy,
             std::vector<double>& sz, std::vector<double>& egas,
             std::vector<double>& tau, double const fgamma,
-            std::array<std::vector<double>, NRF> U,
-            std::vector<double> const mmw, std::vector<double> const X_spc,
-            std::vector<double> const Z_spc, double const dt,
+            std::array<std::vector<double>, NRF>& U,
+            std::vector<double> const& mmw, std::vector<double> const& X_spc,
+            std::vector<double> const& Z_spc, double const dt,
             double const clightinv)
         {
             for (std::int64_t i = RAD_BW; i != RAD_NX - RAD_BW; ++i)
@@ -421,9 +421,9 @@ namespace octotiger {
         std::vector<double> const& rho, std::vector<double>& sx,
         std::vector<double>& sy, std::vector<double>& sz,
         std::vector<double>& egas, std::vector<double>& tau,
-        double const fgamma, std::array<std::vector<double>, NRF> U,
-        std::vector<double> const mmw, std::vector<double> const X_spc,
-        std::vector<double> const Z_spc, double const dt,
+        double const fgamma, std::array<std::vector<double>, NRF>& U,
+        std::vector<double> const& mmw, std::vector<double> const& X_spc,
+        std::vector<double> const& Z_spc, double const dt,
         double const clightinv)
     {
         reference_implementation::radiation_impl(opts_eos, opts_problem,

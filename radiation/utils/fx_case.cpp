@@ -13,47 +13,8 @@
 constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
 namespace octotiger {
-    struct throw_on_pos_mismatch
-    {
-        void operator()(std::istream& is)
-        {
-            std::streampos orig_pos{};
-            std::streampos actual_pos = is.tellg();
-            is.read(reinterpret_cast<char*>(&orig_pos), sizeof(std::streampos));
-
-            if (actual_pos != orig_pos)
-            {
-                throw formatted_exception(
-                    "error: stream positions do not match. actual: %, original: %",
-                    actual_pos,
-                    orig_pos);
-            }
-        }
-    };
-
-    struct ignore_streampos
-    {
-        void operator()(std::istream& is)
-        {
-            is.ignore(24);
-        }
-    };
-
-    void handle_streampos(std::istream& is)
-    {
-        // HACK: I did not consider streampos having different sizes on win, linux,
-        // and mac when creating dump files
-        using streampos_handler_t =
-            std::conditional<sizeof(std::streampos) == 24,
-                throw_on_pos_mismatch,
-                ignore_streampos>::type;
-        streampos_handler_t{}(is);
-    }
-
     std::vector<double> load_v(std::istream& is)
     {
-        handle_streampos(is);
-
         std::size_t size{};
         is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
 
@@ -65,8 +26,6 @@ namespace octotiger {
 
     std::array<std::vector<double>, NRF> load_a(std::istream& is)
     {
-        handle_streampos(is);
-
         std::size_t size{};
         is.read(reinterpret_cast<char*>(&size), sizeof(std::size_t));
         if (size != NRF)
@@ -86,8 +45,6 @@ namespace octotiger {
 
     std::int64_t load_i(std::istream& is)
     {
-        handle_streampos(is);
-
         std::int64_t i{};
         is.read(reinterpret_cast<char*>(&i), sizeof(std::int64_t));
 
@@ -96,8 +53,6 @@ namespace octotiger {
 
     double load_d(std::istream& is)
     {
-        handle_streampos(is);
-
         double d{};
         is.read(reinterpret_cast<char*>(&d), sizeof(double));
 
@@ -124,24 +79,24 @@ namespace octotiger {
         args.physcon_A = load_d(is);
         args.physcon_B = load_d(is);
         args.physcon_c = load_d(is);
+        args.fgamma = load_d(is);
+        args.dt = load_d(is);
+        args.clightinv = load_d(is);
         args.er_i = load_i(is);
         args.fx_i = load_i(is);
         args.fy_i = load_i(is);
         args.fz_i = load_i(is);
         args.d = load_i(is);
-        args.rho = load_v(is);
         args.sx = load_v(is);
         args.sy = load_v(is);
         args.sz = load_v(is);
         args.egas = load_v(is);
         args.tau = load_v(is);
-        args.fgamma = load_d(is);
         args.U = load_a(is);
-        args.mmw = load_v(is);
+        args.rho = load_v(is);
         args.X_spc = load_v(is);
         args.Z_spc = load_v(is);
-        args.dt = load_d(is);
-        args.clightinv = load_d(is);
+        args.mmw = load_v(is);
 
         if (is.eof())
         {
@@ -169,7 +124,7 @@ namespace octotiger {
         outs.sy = load_v(is);
         outs.sz = load_v(is);
         outs.egas = load_v(is);
-        //outs.tau = load_v(is);
+        outs.tau = load_v(is);
         outs.U = load_a(is);
 
         if (is.eof())
