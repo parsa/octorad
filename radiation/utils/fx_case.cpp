@@ -1,16 +1,14 @@
 #include "config.hpp"
 #include "utils/fx_case.hpp"
 #include "utils/util.hpp"
+#include "utils/dump_reader.hpp"
 
 #include <array>
 #include <cstdint>
-#include <fstream>
 #include <ios>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-constexpr char const* const basepath = OCTORAD_DUMP_DIR "/octotiger-radiation-";
 
 namespace octotiger {
     std::vector<double> load_v(std::istream& is)
@@ -61,15 +59,8 @@ namespace octotiger {
 
     fx_args load_case_args(std::size_t index)
     {
-        std::string const args_fn = std::string{basepath} +
-            std::to_string(index) + std::string{".args"};
-        std::ifstream is{args_fn, std::ios::binary};
-
-        if (!is)
-        {
-            throw formatted_exception(
-                "error: cannot open args file \"%\".", args_fn.c_str());
-        }
+        auto stream = open_args_stream(index);
+        auto& is = *stream;
 
         fx_args args;
         args.opts_eos = load_i(is);
@@ -109,15 +100,8 @@ namespace octotiger {
 
     fx_outs load_case_outs(std::size_t index)
     {
-        std::string const outs_fn = std::string{basepath} +
-            std::to_string(index) + std::string{".outs"};
-        std::ifstream is{outs_fn, std::ios::binary};
-
-        if (!is)
-        {
-            throw formatted_exception(
-                "error: cannot open outs file \"%\".", outs_fn.c_str());
-        }
+        auto stream = open_outs_stream(index);
+        auto& is = *stream;
 
         fx_outs outs;
         outs.sx = load_v(is);

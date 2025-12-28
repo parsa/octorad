@@ -2,6 +2,7 @@
 #include "kernels/helpers.hpp"
 #include "kernels/kernel_gpu.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -35,84 +36,72 @@ std::map<std::size_t, cudaStream_t> streams;
 ///////////////////////////////////////////////////////////////////////////////
 struct space_vector
 {
-    explicit space_vector() = default;
-
-    __device__ space_vector(space_vector const& other)
+    __host__ __device__ space_vector()
+      : x(0.0)
+      , y(0.0)
+      , z(0.0)
     {
-        for (std::size_t i = 0; i < 4; ++i)
+    }
+    __host__ __device__ space_vector(double vx, double vy, double vz)
+      : x(vx)
+      , y(vy)
+      , z(vz)
+    {
+    }
+
+    __host__ __device__ double& operator[](std::size_t const index)
+    {
+        switch (index)
         {
-            data_[i] = other.data_[i];
+        case 0:
+            return x;
+        case 1:
+            return y;
+        default:
+            return z;
         }
     }
 
-    __device__ double& operator[](std::size_t const index)
+    __host__ __device__ double operator[](std::size_t const index) const
     {
-        return data_[index];
+        switch (index)
+        {
+        case 0:
+            return x;
+        case 1:
+            return y;
+        default:
+            return z;
+        }
     }
 
-    __device__ double operator[](std::size_t const index) const
+    __device__ void scale(double const factor)
     {
-        return data_[index];
+        x *= factor;
+        y *= factor;
+        z *= factor;
     }
 
-    __device__ space_vector operator/(double const rhs) const
+    __device__ double dot(space_vector const& rhs) const
     {
-        space_vector ret;
-        ret.data_[0] = data_[0] / rhs;
-        ret.data_[1] = data_[1] / rhs;
-        ret.data_[2] = data_[2] / rhs;
-        ret.data_[3] = data_[3] / rhs;
-
-        return ret;
+        return (x * rhs.x) + (y * rhs.y) + (z * rhs.z);
     }
 
-    __device__ space_vector operator-(space_vector const& rhs) const
-    {
-        space_vector ret;
-        ret.data_[0] = data_[0] - rhs.data_[0];
-        ret.data_[1] = data_[1] - rhs.data_[1];
-        ret.data_[2] = data_[2] - rhs.data_[2];
-        ret.data_[3] = data_[3] - rhs.data_[3];
-
-        return ret;
-    }
-
-    __device__ space_vector operator*(double const rhs) const
-    {
-        space_vector ret;
-        ret.data_[0] = data_[0] * rhs;
-        ret.data_[1] = data_[1] * rhs;
-        ret.data_[2] = data_[2] * rhs;
-        ret.data_[3] = data_[3] * rhs;
-
-        return ret;
-    }
-
-private:
-    double data_[4]{};
+    double x{};
+    double y{};
+    double z{};
 };
 
-__device__ space_vector make_space_vector(double x, double y, double z)
+__device__ inline space_vector make_space_vector(double x, double y, double z)
 {
-    space_vector ret;
-    ret[0] = x;
-    ret[1] = y;
-    ret[2] = z;
-    return ret;
+    return space_vector{x, y, z};
 }
 
-template <typename T1, typename T2>
-struct d_pair
+struct radiation_step_result
 {
-    explicit d_pair() = default;
-    __device__ d_pair(T1 f, T2 s)
-      : first(f)
-      , second(s)
-    {
-    }
-
-    T1 first{};
-    T2 second{};
+    double dE_dt{};
+    space_vector dF_dt{};
+    double final_e{};
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -271,104 +260,198 @@ __device__ void abort_if_solver_not_converged(double const eg_t0, double E0,
     assert(false);
 }
 
-__device__ d_pair<double, space_vector> implicit_radiation_step(
+__noinline__ __device__ radiation_step_result implicit_radiation_step(
     std::int64_t const opts_problem, double const physcon_c, double E0,
     double& e0, space_vector F0, space_vector u0, double const rho,
     double const mmw, double const X, double const Z, double const dt)
 {
     double const c = physcon_c;
+    double const rhoc2 = rho * c * c;
+    double const inv_rhoc2 = 1.0 / rhoc2;
+    double const inv_c = 1.0 / c;
+    double const inv_rhoc2_c = inv_rhoc2 * inv_c;
+    double const dt_c = dt * c;
+
     double kp = kappa_p(opts_problem, rho, e0, mmw, X, Z);
     double kr = kappa_R(opts_problem, rho, e0, mmw, X, Z);
-    double const rhoc2 = rho * c * c;
+    kp *= dt_c;
+    kr *= dt_c;
 
-    E0 /= rhoc2;
-    F0 = F0 / (rhoc2 * c);
-    e0 /= rhoc2;
-    u0 = u0 / c;
-    kp *= dt * c;
-    kr *= dt * c;
+    double const E0_n = E0 * inv_rhoc2;
+    double const F0x = F0.x * inv_rhoc2_c;
+    double const F0y = F0.y * inv_rhoc2_c;
+    double const F0z = F0.z * inv_rhoc2_c;
+    double const u0x = u0.x * inv_c;
+    double const u0y = u0.y * inv_c;
+    double const u0z = u0.z * inv_c;
 
-    auto const B = [opts_problem, physcon_c, rho, mmw, c, rhoc2](
-                       double const e) {
-        return (4.0 * M_PI / c) *
-            B_p(opts_problem, physcon_c, rho, e * rhoc2, mmw) / rhoc2;
-    };
+    double const e0_n = e0 * inv_rhoc2;
+    double const eg_t0 = e0_n + 0.5 * (u0x * u0x + u0y * u0y + u0z * u0z);
+    double const B_scale = (4.0 * M_PI / c) * inv_rhoc2;
 
-    auto E = E0;
-    auto eg_t = e0 + 0.5 * (u0[0] * u0[0] + u0[1] * u0[1] + u0[2] * u0[2]);
-    auto F = F0;
-    auto u = u0;
-    double ei{};
-    auto const eg_t0 = eg_t;
+    auto evaluate = [&](double de, double& E_out, double& eg_t_out,
+                        double& ei_out, double& Fx_out, double& Fy_out,
+                        double& Fz_out) -> double {
+        E_out = E0_n + de;
+        double const denom = 1.0 + kr * (1.0 + (4.0 / 3.0) * E_out);
+        double const denom_inv = 1.0 / denom;
+        double const k4E = (4.0 / 3.0) * kr * E_out;
 
-    double u2_0 = 0.0;
-    double F2_0 = 0.0;
-    for (int d = 0; d < NDIM; d++)
-    {
-        u2_0 += u[d] * u[d];
-        F2_0 += F[d] * F[d];
-    }
-    // printf( "%e %e\n", (double) u2_0, (double) (F2_0/E/E));
-    auto const test = [&](double de) {
-        E = E0 + de;
         double u2 = 0.0;
         double udotF = 0.0;
-        for (int d = 0; d < NDIM; d++)
-        {
-            auto const num = F0[d] + (4.0 / 3.0) * kr * E * (u0[d] + F0[d]);
-            auto const den = 1.0 + kr * (1.0 + (4.0 / 3.0) * E);
-            auto const deninv = 1.0 / den;
-            F[d] = num * deninv;
-            u[d] = u0[d] + F0[d] - F[d];
-            u2 += u[d] * u[d];
-            udotF += F[d] * u[d];
-        }
-        ei = fmax(eg_t0 - E + E0 - 0.5 * u2, double{});
-        double const b = B(ei);
-        double f = E - E0;
-        f += (kp * (E - b) + (kr - 2.0 * kp) * udotF);
-        eg_t = eg_t0 + E0 - E;
-        return f;
+
+        double const Fx_base = F0x;
+        double const Fx_term = k4E * (u0x + Fx_base);
+        Fx_out = (Fx_base + Fx_term) * denom_inv;
+        double const ux = u0x + Fx_base - Fx_out;
+        u2 += ux * ux;
+        udotF += Fx_out * ux;
+
+        double const Fy_base = F0y;
+        double const Fy_term = k4E * (u0y + Fy_base);
+        Fy_out = (Fy_base + Fy_term) * denom_inv;
+        double const uy = u0y + Fy_base - Fy_out;
+        u2 += uy * uy;
+        udotF += Fy_out * uy;
+
+        double const Fz_base = F0z;
+        double const Fz_term = k4E * (u0z + Fz_base);
+        Fz_out = (Fz_base + Fz_term) * denom_inv;
+        double const uz = u0z + Fz_base - Fz_out;
+        u2 += uz * uz;
+        udotF += Fz_out * uz;
+
+        ei_out = fmax(eg_t0 - E_out + E0_n - 0.5 * u2, 0.0);
+        double const b =
+            B_scale * B_p(opts_problem, physcon_c, rho, ei_out * rhoc2, mmw);
+        eg_t_out = eg_t0 + E0_n - E_out;
+        return (E_out - E0_n) + kp * (E_out - b) + (kr - 2.0 * kp) * udotF;
     };
 
-    abort_if_solver_not_converged(eg_t0, E0, test, E, eg_t);
+    double de_max = eg_t0;
+    double de_mid = 0.0;
+    double de_min = -E0_n;
 
-    ei = eg_t - 0.5 * (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-    e0 = ei * rhoc2;
-    auto const dtinv = 1.0 / dt;
+    double E_mid = 0.0;
+    double eg_t_mid = 0.0;
+    double ei_mid = 0.0;
+    double Fx_mid = F0x;
+    double Fy_mid = F0y;
+    double Fz_mid = F0z;
+    double f_mid =
+        evaluate(de_mid, E_mid, eg_t_mid, ei_mid, Fx_mid, Fy_mid, Fz_mid);
 
-    return d_pair<double, space_vector>(
-        double((E - E0) * dtinv * rhoc2), ((F - F0) * dtinv * rhoc2 * c));
+    double f_min = 0.0;
+    {
+        double E_tmp = 0.0;
+        double eg_t_tmp = 0.0;
+        double ei_tmp = 0.0;
+        double Fx_tmp = F0x;
+        double Fy_tmp = F0y;
+        double Fz_tmp = F0z;
+        f_min = evaluate(de_min, E_tmp, eg_t_tmp, ei_tmp, Fx_tmp, Fy_tmp, Fz_tmp);
+    }
+
+    constexpr std::size_t MAX_ITERATIONS = 50;
+    double const error_tolerance = 1.0e-9;
+
+    for (std::size_t iter = 0; iter < MAX_ITERATIONS; ++iter)
+    {
+        #if defined(OCTORAD_RELAXED)
+        double const denom_err = fabs(E_mid) + fabs(eg_t_mid) + 1e-12;
+        #else
+        double const denom_err = E_mid + eg_t_mid;
+        #endif
+        double const error = fmax(fabs(f_mid), fabs(f_min)) / denom_err;
+        if (error < error_tolerance)
+        {
+            break;
+        }
+
+        if ((f_min < 0.0) != (f_mid < 0.0))
+        {
+            de_max = de_mid;
+            de_mid = 0.5 * (de_min + de_max);
+        }
+        else
+        {
+            de_min = de_mid;
+            f_min = f_mid;
+            de_mid = 0.5 * (de_min + de_max);
+        }
+
+        f_mid =
+            evaluate(de_mid, E_mid, eg_t_mid, ei_mid, Fx_mid, Fy_mid, Fz_mid);
+    }
+
+    #if defined(OCTORAD_RELAXED)
+    double const final_error =
+        fmax(fabs(f_mid), fabs(f_min)) / (fabs(E_mid) + fabs(eg_t_mid) + 1e-12);
+    (void)final_error;
+    #else
+    double const final_error =
+        fmax(fabs(f_mid), fabs(f_min)) / (E_mid + eg_t_mid);
+    if (final_error >= error_tolerance)
+    {
+        printf("implicit radiation solver failed to converge: err=%e\n",
+            final_error);
+        assert(false);
+    }
+    #endif
+
+    double const dtinv = 1.0 / dt;
+    radiation_step_result result;
+    result.dE_dt = (E_mid - E0_n) * dtinv * rhoc2;
+    result.dF_dt = make_space_vector(
+        (Fx_mid - F0x) * dtinv * rhoc2 * c,
+        (Fy_mid - F0y) * dtinv * rhoc2 * c,
+        (Fz_mid - F0z) * dtinv * rhoc2 * c);
+    result.final_e = ei_mid * rhoc2;
+
+    return result;
 }
 
-__global__ void //__launch_bounds__(512, 1)
-    radiation_impl(std::int64_t const opts_eos,
-        std::int64_t const opts_problem,
-        double const opts_dual_energy_sw1,
-        double const opts_dual_energy_sw2,
-        double const physcon_A,
-        double const physcon_B,
-        double const physcon_c,
-        std::int64_t const er_i,
-        std::int64_t const fx_i,
-        std::int64_t const fy_i,
-        std::int64_t const fz_i,
-        std::int64_t const d,
-        std::size_t const grid_i_size,
-        std::size_t const Ui_size,
-        double const fgamma,
-        double const dt,
-        double const clightinv,
-        payload_t* const payload_ptr)
+__device__ inline int lindex(int i, int j, int k, int n)
+{
+    return (i * n + j) * n + k;
+}
+
+#if defined(OCTORAD_RELAXED)
+__global__ __launch_bounds__(128, 2)
+#else
+__global__ __launch_bounds__(128, 5)
+#endif
+void radiation_impl(std::int64_t const opts_eos,
+    std::int64_t const opts_problem,
+    double const opts_dual_energy_sw1,
+    double const opts_dual_energy_sw2,
+    double const physcon_A,
+    double const physcon_B,
+    double const physcon_c,
+    std::int64_t const er_i,
+    std::int64_t const fx_i,
+    std::int64_t const fy_i,
+    std::int64_t const fz_i,
+    std::int64_t const d,
+        int const grid_i_size,
+        int const Ui_size,
+    double const fgamma,
+    double const dt,
+    double const clightinv,
+    payload_t* const payload_ptr)
 {
     payload_t& p = *payload_ptr;
 
-    std::int64_t const i = threadIdx.x;
-    std::int64_t const j = threadIdx.y;
-    std::int64_t const k = threadIdx.z + blockDim.z * blockIdx.z;
+    int const i = threadIdx.x + blockDim.x * blockIdx.x;
+    int const j = threadIdx.y + blockDim.y * blockIdx.y;
+    int const k = threadIdx.z + blockDim.z * blockIdx.z;
+    if (i >= grid_i_size || j >= grid_i_size || k >= grid_i_size)
+    {
+        return;
+    }
 
-    std::int64_t const iiih = (i * grid_i_size + j) * grid_i_size + k;
-    std::int64_t const iiir = (i * grid_i_size + j) * grid_i_size + k;
+    int const iiih = lindex(i, j, k, grid_i_size);
+    int const iiir = iiih;
     double const den = p.rho[iiih];
     double const deninv = INVERSE(den);
     double vx = p.sx[iiih] * deninv;
@@ -389,22 +472,18 @@ __global__ void //__launch_bounds__(512, 1)
         e0 = pow(p.tau[iiih], fgamma);
     }
     double E0 = p.U[er_i][iiir];
-    space_vector F0 = make_space_vector(    //
-        p.U[fx_i][iiir],                    //
-        p.U[fy_i][iiir],                    //
-        p.U[fz_i][iiir]);
+    space_vector F0 = make_space_vector(
+        p.U[fx_i][iiir], p.U[fy_i][iiir], p.U[fz_i][iiir]);
     space_vector u0 = make_space_vector(vx, vy, vz);
-    double E1 = E0;
-    space_vector F1 = F0;
-    space_vector u1 = u0;
-    double e1 = e0;
 
-    auto const ddt = implicit_radiation_step(opts_problem, physcon_c, E1, e1,
-        F1, u1, den, p.mmw[iiir], p.X_spc[iiir], p.Z_spc[iiir], dt);
-    double const dE_dt = ddt.first;
-    double const dFx_dt = ddt.second[0];
-    double const dFy_dt = ddt.second[1];
-    double const dFz_dt = ddt.second[2];
+    auto const step = implicit_radiation_step(opts_problem, physcon_c, E0, e0,
+        F0, u0, den, p.mmw[iiir], p.X_spc[iiir], p.Z_spc[iiir], dt);
+    double const dE_dt = step.dE_dt;
+    double const dFx_dt = step.dF_dt[0];
+    double const dFy_dt = step.dF_dt[1];
+    double const dFz_dt = step.dF_dt[2];
+    double const updated_E = E0 + dE_dt * dt;
+    double const e1 = step.final_e;
 
     // Accumulate derivatives
     p.U[er_i][iiir] += dE_dt * dt;
@@ -432,7 +511,7 @@ __global__ void //__launch_bounds__(512, 1)
     }
     if (p.U[er_i][iiir] <= 0.0)
     {
-        std::printf("Er = %e %e %e %e\n", E0, E1, p.U[er_i][iiir], dt);
+        std::printf("Er = %e %e %e %e\n", E0, updated_E, p.U[er_i][iiir], dt);
         assert(false);
     }
     e = fmax(e, 0.0);
@@ -448,6 +527,68 @@ __global__ void //__launch_bounds__(512, 1)
         p.sx[iiih] = 0.0;
         p.sy[iiih] = 0.0;
         p.sz[iiih] = 0.0;
+    }
+}
+
+namespace octotiger {
+    void radiation_gpu_kernel::enqueue(std::int64_t const opts_eos,
+        std::int64_t const opts_problem,
+        double const opts_dual_energy_sw1,
+        double const opts_dual_energy_sw2,
+        double const physcon_A,
+        double const physcon_B,
+        double const physcon_c,
+        std::int64_t const er_i,
+        std::int64_t const fx_i,
+        std::int64_t const fy_i,
+        std::int64_t const fz_i,
+        std::int64_t const d,
+        std::vector<double> const& rho,
+        std::vector<double>& sx,
+        std::vector<double>& sy,
+        std::vector<double>& sz,
+        std::vector<double>& egas,
+        std::vector<double>& tau,
+        double const fgamma,
+        std::array<std::vector<double>, NRF>& U,
+        std::vector<double> const& mmw,
+        std::vector<double> const& X_spc,
+        std::vector<double> const& Z_spc,
+        double const dt,
+        double const clightinv,
+        bool const copy_back)
+    {
+        payload_t& payload = *h_payload_ptr;
+        load_args(payload, d, sx, sy, sz, egas, tau, U, rho, X_spc, Z_spc, mmw);
+        device_copy_from_host(copy_policy::async, d_payload_ptr.get(),
+            h_payload_ptr.get(), streams[stream_index]);
+
+        std::size_t const grid_i = RAD_GRID_I;
+        unsigned const bx = 8;
+        unsigned const by = 8;
+        unsigned const bz = 2;
+        dim3 const block_dim(bx, by, bz);
+        dim3 const grid_dim(
+            static_cast<unsigned>((grid_i + bx - 1) / bx),
+            static_cast<unsigned>((grid_i + by - 1) / by),
+            static_cast<unsigned>((grid_i + bz - 1) / bz));
+
+        launch_kernel(radiation_impl, grid_dim, block_dim, streams[stream_index],
+            opts_eos, opts_problem, opts_dual_energy_sw1, opts_dual_energy_sw2,
+            physcon_A, physcon_B, physcon_c, er_i, fx_i, fy_i, fz_i, d,
+            static_cast<int>(RAD_GRID_I), static_cast<int>(GRID_ARRAY_SIZE),
+            fgamma, dt, clightinv, d_payload_ptr.get());
+
+        if (copy_back)
+        {
+            device_copy_to_host<output_payload_t>(copy_policy::async,
+                d_payload_ptr.get(), h_payload_ptr.get(), streams[stream_index]);
+        }
+    }
+
+    void radiation_gpu_kernel::stream_sync()
+    {
+        device_stream_sync(streams[stream_index]);
     }
 }
 
@@ -574,6 +715,7 @@ namespace octotiger {
                     sy[iiih] = payload.sy[index_counter];
                     sz[iiih] = payload.sz[index_counter];
                     egas[iiih] = payload.egas[index_counter];
+                    tau[iiih] = payload.tau[index_counter];
                     for (std::size_t l = 0; l < NRF; ++l)
                     {
                         U[l][iiih] = payload.U[l][index_counter];
@@ -621,9 +763,19 @@ namespace octotiger {
             h_payload_ptr.get(), streams[stream_index]);
 
         // launch the kernel
+        std::size_t const grid_i = RAD_GRID_I;
+        unsigned const bx = 8;
+        unsigned const by = 8;
+        unsigned const bz = 2;
+        dim3 const block_dim(bx, by, bz);
+        dim3 const grid_dim(
+            static_cast<unsigned>((grid_i + bx - 1) / bx),
+            static_cast<unsigned>((grid_i + by - 1) / by),
+            static_cast<unsigned>((grid_i + bz - 1) / bz));
+
         launch_kernel(radiation_impl,                        // kernel
-            dim3(4),                                         // grid dims
-            dim3(RAD_GRID_I, RAD_GRID_I, RAD_GRID_I / 4),    // block dims
+            grid_dim,                                        // grid dims
+            block_dim,                                       // block dims
             streams[stream_index],                           // stream
             opts_eos, opts_problem,                          //
             opts_dual_energy_sw1, opts_dual_energy_sw2,      //
@@ -631,8 +783,8 @@ namespace octotiger {
             er_i,                                            //
             fx_i, fy_i, fz_i,                                //
             d,                                               //
-            RAD_GRID_I,                                      //
-            GRID_ARRAY_SIZE,                                 //
+            static_cast<int>(RAD_GRID_I),                    //
+            static_cast<int>(GRID_ARRAY_SIZE),               //
             fgamma,                                          //
             dt,                                              //
             clightinv,                                       //

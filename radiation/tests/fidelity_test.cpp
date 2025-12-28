@@ -1,8 +1,8 @@
 #include "kernels/kernel_cpu.hpp"
-#include "kernels/kernel_v2.hpp"
-#if OCTORAD_HAVE_CUDA
-#include "kernels/kernel_gpu.hpp"
+#if !defined(OCTORAD_HAVE_CUDA)
+#error "fidelity_test requires CUDA support"
 #endif
+#include "kernels/kernel_gpu.hpp"
 #include "utils/fx_case.hpp"
 #include "utils/fx_compare.hpp"
 #include "utils/util.hpp"
@@ -34,7 +34,6 @@ struct case_checker
 {
     case_checker()
       : cpu_kernel()
-      , v2_kernel()
       , gpu_kernel()
     {
     }
@@ -57,18 +56,6 @@ struct case_checker
         std::printf(
             "case %d code integrity check passed.\n", static_cast<int>(index));
 
-        std::printf("***** cpu kernel (v2) *****\n");
-
-        if (!check_run_result(test_case, v2_kernel))
-        {
-            std::printf("case %d code integrity check failed.\n",
-                static_cast<int>(index));
-            return false;
-        }
-        std::printf(
-            "case %d code integrity check passed.\n", static_cast<int>(index));
-
-#if OCTORAD_HAVE_CUDA
         std::printf("***** gpu kernel (ported code) *****\n");
         if (!check_run_result(test_case, gpu_kernel))
         {
@@ -78,31 +65,36 @@ struct case_checker
         }
         std::printf(
             "case %d code integrity check passed.\n", static_cast<int>(index));
-#endif
 
         return true;
     }
 
 private:
     octotiger::radiation_cpu_kernel cpu_kernel;
-    octotiger::radiation_v2_kernel v2_kernel;
-#if OCTORAD_HAVE_CUDA
     octotiger::radiation_gpu_kernel gpu_kernel;
-#endif
 };
 
 int main()
 {
     try
     {
-        case_checker check_case;
-        //check_case(78);
-        for (std::size_t i = 0; i < CASE_COUNT / 100; ++i)
+        octotiger::device_init();
+        bool success = true;
         {
-            if (!check_case(i))
+            case_checker check_case;
+            for (std::size_t i = 0; i < CASE_COUNT / 100; ++i)
             {
-                return 1;
+                if (!check_case(i))
+                {
+                    success = false;
+                    break;
+                }
             }
+        }
+        octotiger::device_reset();
+        if (!success)
+        {
+            return 1;
         }
     }
     catch (std::exception const& e)

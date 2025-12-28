@@ -1,1 +1,7 @@
-cmake-build-*
+/.vscode/
+/.cursor/
+
+/cmake-build-*/
+/build/
+/cmake-build-*/
+*.pack.zst

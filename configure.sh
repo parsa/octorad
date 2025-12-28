@@ -2,12 +2,6 @@
 
 set -euxo pipefail
 
-DUMP_DIR=${DUMP_DIR:-~/Repositories/octorad/dumps}
-
-if [[ ! -d ${DUMP_DIR} ]]; then
-    echo 'Unable to access dump directory.'
-    exit 1
-fi
 if [[ ! -x $(command -v nvcc) ]]; then
     echo 'cannot find nvcc'
     exit 1
@@ -17,7 +11,7 @@ if [[ ! -x $(command -v ninja) ]]; then
     exit 1
 fi
 
-cmake -H. -Bcmake-build-debug -GNinja -DOCTORAD_DUMP_DIR=${DUMP_DIR} -DOCTORAD_DUMP_COUNT=OCTORAD_DUMP_COUNT=13140
+cmake -H. -Bcmake-build-debug -GNinja -DOCTORAD_WITH_HPX=OFF -DCMAKE_CUDA_ARCHITECTURES=70
 cmake --build cmake-build-debug
 
 #read -p "Press [Enter] key to start backup..."

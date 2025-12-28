@@ -11,15 +11,9 @@
 #include <cstdlib>
 #include <utility>
 #include <vector>
-#if defined(OCTORAD_HAVE_VC)
-#include <Vc/Vc>
-#endif
 
 namespace octotiger {
     namespace v2 {
-#if defined(OCTORAD_HAVE_VC)
-        using space_vector = Vc::Vector<double, Vc::VectorAbi::Avx>;
-#else
         using space_vector = std::array<double, 3>;
 
         space_vector make_space_vector(
@@ -71,7 +65,6 @@ namespace octotiger {
 
             return ret;
         }
-#endif
 
         constexpr inline std::int64_t hindex(
             std::int64_t const i, std::int64_t const j, std::int64_t const k)
